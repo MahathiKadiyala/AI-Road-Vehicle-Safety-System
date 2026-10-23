@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AI-Powered Road and Vehicle Safety System (`AI-Road-Vehicle-Safety-System`)
 
 An end-to-end intelligent safety platform combining road hazard detection, preliminary vehicle condition assessment under Indian technical standards (CMVR Rule 95 / AIS-044), corridor accident-risk prediction with Explainable AI (TreeSHAP), and emergency trauma advisory navigation.
@@ -150,3 +151,7 @@ docker run --name postgis-roadsafety -e POSTGRES_PASSWORD=postgres -e POSTGRES_D
 - **Zero Fake Predictions**: No mock scores or AI results are presented in Phase 1.
 - **Accurate Health Probe**: `GET /health` reports the real connection status of PostgreSQL and PostGIS without falsification.
 - **Statutory Alignment**: Vehicle metrics comply with CMVR Rule 95 ($1.6\text{ mm}$ minimum tread limit). All assessments carry preliminary disclaimers.
+=======
+# AI-Road-Vehicle-Safety-System
+An AI-powered platform for road hazard detection, vehicle safety assessment, accident risk prediction, and emergency support to enable safer roads and smarter decisions.
+>>>>>>> origin/main
