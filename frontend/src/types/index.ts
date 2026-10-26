@@ -32,6 +32,7 @@ export interface Hazard {
   latitude: number;
   longitude: number;
   image_path?: string;
+  image_url?: string | null;
   source: string;
   status: HazardStatus;
   created_at: string;

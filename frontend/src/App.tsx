@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { UserRole, HealthResponse } from './types';
-import { fetchHealthStatus } from './services/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { UserRole, HealthResponse, Hazard } from './types';
+import { fetchHealthStatus, fetchHazardReports } from './services/api';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { DisclaimerBanner } from './components/common/DisclaimerBanner';
 import { MapContainer } from './components/map/MapContainer';
+import { HazardReportForm } from './components/hazards/HazardReportForm';
+import { HazardReportList } from './components/hazards/HazardReportList';
 import {
   Database,
   MapPin,
@@ -12,7 +14,7 @@ import {
   Info,
   CheckCircle2,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -25,6 +27,11 @@ export const App: React.FC = () => {
     lon: 77.5946
   });
 
+  // Phase 2: Hazard reporting state
+  const [hazards, setHazards] = useState<Hazard[]>([]);
+  const [loadingHazards, setLoadingHazards] = useState<boolean>(false);
+  const [focusHazard, setFocusHazard] = useState<Hazard | null>(null);
+
   const checkHealth = async () => {
     setLoadingHealth(true);
     const data = await fetchHealthStatus();
@@ -32,17 +39,42 @@ export const App: React.FC = () => {
     setLoadingHealth(false);
   };
 
+  const loadHazards = useCallback(async () => {
+    setLoadingHazards(true);
+    try {
+      const data = await fetchHazardReports({ limit: 100 });
+      setHazards(data);
+    } catch (err) {
+      console.warn('Could not fetch hazard reports:', err);
+      // Don't clear existing hazards on transient error
+    } finally {
+      setLoadingHazards(false);
+    }
+  }, []);
+
   useEffect(() => {
     checkHealth();
-    const interval = setInterval(checkHealth, 15000);
-    return () => clearInterval(interval);
+    loadHazards();
+    const healthInterval = setInterval(checkHealth, 30000);
+    const hazardInterval = setInterval(loadHazards, 15000);
+    return () => {
+      clearInterval(healthInterval);
+      clearInterval(hazardInterval);
+    };
+  }, [loadHazards]);
+
+  const handleSelectHazard = useCallback((hazard: Hazard) => {
+    setFocusHazard(hazard);
+    setSelectedCoord({ lat: hazard.latitude, lon: hazard.longitude });
+    // Reset focus after animation completes
+    setTimeout(() => setFocusHazard(null), 2000);
   }, []);
 
   const roleDescriptions: Record<UserRole, { title: string; desc: string; phase: string }> = {
     driver: {
       title: 'Citizen Driver Experience',
-      desc: 'Enables reporting potholes and cracks with GPS and camera evidence, and viewing active route hazards.',
-      phase: 'Phase 2 & 5'
+      desc: 'Report potholes and cracks with GPS and camera evidence, and view active route hazards on the map.',
+      phase: 'Phase 2'
     },
     buyer: {
       title: 'Used-Vehicle Buyer Experience',
@@ -159,7 +191,7 @@ export const App: React.FC = () => {
                     )}
                   </div>
                   <div className="text-[10px] text-slate-400 mt-1.5">
-                    Required for spatial indexing (`ST_DWithin`) in Phase 2.
+                    Required for spatial indexing in advanced queries.
                   </div>
                 </div>
               </div>
@@ -174,20 +206,20 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Map & Spatial Inspection Section */}
+        {/* Map & Hazard Reporting Section */}
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-sky-400" />
-                Spatial Infrastructure Canvas
+                Hazard Reporting & Map View
               </h2>
               <p className="text-xs text-slate-400">
-                Interactive OpenStreetMap container configured with EPSG:4326 coordinate projections.
+                Click the map to select a location, then use the form to submit a citizen hazard report.
               </p>
             </div>
             <div className="text-xs text-slate-300 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl flex items-center gap-2">
-              <span className="text-slate-400">Inspection Target:</span>
+              <span className="text-slate-400">Selected:</span>
               <span className="font-mono text-sky-400 font-semibold">
                 {selectedCoord.lat.toFixed(4)}, {selectedCoord.lon.toFixed(4)}
               </span>
@@ -198,6 +230,27 @@ export const App: React.FC = () => {
             initialLat={12.9716}
             initialLon={77.5946}
             onLocationSelect={(lat, lon) => setSelectedCoord({ lat, lon })}
+            hazards={hazards}
+            focusHazard={focusHazard}
+          />
+        </div>
+
+        {/* Hazard Form + Report List Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <HazardReportForm
+            selectedLat={selectedCoord.lat}
+            selectedLon={selectedCoord.lon}
+            onReportCreated={loadHazards}
+            onRequestLocation={() => {
+              // Scroll to map section
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+
+          <HazardReportList
+            hazards={hazards}
+            loading={loadingHazards}
+            onSelectHazard={handleSelectHazard}
           />
         </div>
 
@@ -212,13 +265,13 @@ export const App: React.FC = () => {
             <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-300">Phase 2</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">
-                  Next Up
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                  Active
                 </span>
               </div>
               <h4 className="text-sm font-bold text-white">Road Hazard Reporting</h4>
               <p className="text-[11px] text-slate-400">
-                Citizen photo uploads, PostGIS persistence, and YOLO road-damage model evaluation.
+                Citizen photo uploads, hazard persistence, and interactive map visualization.
               </p>
             </div>
 

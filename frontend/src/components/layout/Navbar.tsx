@@ -59,7 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white text-base tracking-tight">AI-Road-Safety</span>
                 <span className="px-1.5 py-0.5 text-[10px] uppercase font-mono bg-sky-950 text-sky-400 border border-sky-800/50 rounded">
-                  Phase 1 MVP
+                  Phase 2
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">Road Hazard & Vehicle Risk Intelligence</p>

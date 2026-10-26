@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, computed_field
 
 
 class HazardBase(BaseModel):
@@ -46,3 +46,11 @@ class HazardRead(HazardBase):
     status: str
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def image_url(self) -> Optional[str]:
+        """Generate the static file URL for the uploaded image."""
+        if not self.image_path:
+            return None
+        return f"/static/{self.image_path}"
