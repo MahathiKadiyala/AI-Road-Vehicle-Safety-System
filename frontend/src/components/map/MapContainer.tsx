@@ -23,7 +23,7 @@ const severityColors: Record<string, string> = {
 };
 
 // Custom modern SVG marker for Leaflet using DivIcon (avoids broken PNG bundle issues)
-const createModernPin = (color: string = '#0ea5e9') => {
+const createModernPin = (color: string = '#0284c7') => {
   return L.divIcon({
     className: 'custom-map-pin',
     html: `
@@ -38,7 +38,7 @@ const createModernPin = (color: string = '#0ea5e9') => {
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+          box-shadow: 0 4px 14px rgba(15,23,42,0.25);
           border: 2px solid white;
         ">
           <div style="transform: rotate(45deg); font-size: 14px;">📍</div>
@@ -68,8 +68,8 @@ const createHazardPin = (severity: string) => {
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 3px 12px rgba(0,0,0,0.4);
-          border: 2px solid rgba(255,255,255,0.9);
+          box-shadow: 0 3px 12px rgba(15,23,42,0.25);
+          border: 2px solid white;
         ">
           <div style="transform: rotate(45deg); font-size: 12px;">⚠️</div>
         </div>
@@ -123,37 +123,37 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const samplePin = createModernPin('#0284c7');
 
   return (
-    <div className="relative w-full h-[540px] rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl">
+    <div className="relative w-full h-[540px] rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-md">
       {/* Floating Map HUD Top */}
       <div className="absolute top-4 left-4 z-[400] flex flex-wrap items-center gap-2 pointer-events-none">
-        <div className="bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/60 shadow-lg pointer-events-auto flex items-center gap-2 text-xs">
-          <Navigation className="w-3.5 h-3.5 text-sky-400" />
-          <span className="font-semibold text-slate-200">OpenStreetMap Live Layer</span>
-          <span className="text-[10px] text-slate-400 font-mono">EPSG:4326</span>
+        <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200/90 shadow-md pointer-events-auto flex items-center gap-2 text-xs">
+          <Navigation className="w-3.5 h-3.5 text-sky-600" />
+          <span className="font-semibold text-slate-800">OpenStreetMap Live Layer</span>
+          <span className="text-[10px] text-slate-500 font-mono">EPSG:4326</span>
         </div>
 
         {clickedCoord && (
-          <div className="bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/60 shadow-lg pointer-events-auto flex items-center gap-2 text-xs">
-            <Crosshair className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="font-mono text-slate-300">
+          <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200/90 shadow-md pointer-events-auto flex items-center gap-2 text-xs">
+            <Crosshair className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="font-mono text-slate-700 font-medium">
               {clickedCoord.lat.toFixed(5)}, {clickedCoord.lon.toFixed(5)}
             </span>
           </div>
         )}
 
         {hazards.length > 0 && (
-          <div className="bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/60 shadow-lg pointer-events-auto flex items-center gap-2 text-xs">
-            <MapPin className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-slate-300">{hazards.length} hazard{hazards.length !== 1 ? 's' : ''} on map</span>
+          <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200/90 shadow-md pointer-events-auto flex items-center gap-2 text-xs">
+            <MapPin className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-slate-700 font-medium">{hazards.length} hazard{hazards.length !== 1 ? 's' : ''} on map</span>
           </div>
         )}
       </div>
 
       {/* Floating Map HUD Bottom Helper */}
       <div className="absolute bottom-4 left-4 z-[400] pointer-events-none">
-        <div className="bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/60 shadow-lg pointer-events-auto flex items-center gap-2 text-[11px] text-slate-300">
-          <Eye className="w-3.5 h-3.5 text-sky-400" />
-          <span>Click anywhere to set hazard location. Colored markers show reported hazards.</span>
+        <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200/90 shadow-md pointer-events-auto flex items-center gap-2 text-[11px] text-slate-600">
+          <Eye className="w-3.5 h-3.5 text-sky-600" />
+          <span>Click anywhere on the map to set a hazard location. Markers indicate reported hazards.</span>
         </div>
       </div>
 
@@ -182,16 +182,16 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           <Marker position={[clickedCoord.lat, clickedCoord.lon]} icon={samplePin}>
             <Popup>
               <div className="text-xs space-y-1">
-                <div className="font-bold text-sky-400 flex items-center gap-1">
+                <div className="font-bold text-sky-700 flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5" />
                   Selected Report Location
                 </div>
-                <div className="text-slate-300 font-mono text-[11px]">
+                <div className="text-slate-700 font-mono text-[11px]">
                   Latitude: {clickedCoord.lat.toFixed(5)}<br />
                   Longitude: {clickedCoord.lon.toFixed(5)}
                 </div>
-                <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-700">
-                  Use the form to submit a hazard report at this location.
+                <p className="text-[10px] text-slate-500 pt-1 border-t border-slate-100">
+                  Use the report form to submit a hazard report at this location.
                 </p>
               </div>
             </Popup>
@@ -212,20 +212,20 @@ export const MapContainer: React.FC<MapContainerProps> = ({
               <Popup maxWidth={280} minWidth={200}>
                 <div className="text-xs space-y-2" style={{ minWidth: '180px' }}>
                   <div>
-                    <div className="font-bold text-white text-sm">{hazard.title}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
-                      Citizen Report · {hazard.hazard_type} · {hazard.severity}
+                    <div className="font-bold text-slate-900 text-sm">{hazard.title}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 capitalize">
+                      Citizen Report · {hazard.hazard_type} · {hazard.severity} severity
                     </div>
                   </div>
 
                   {hazard.description && (
-                    <p className="text-slate-300 text-[11px] leading-relaxed">
+                    <p className="text-slate-700 text-[11px] leading-relaxed">
                       {hazard.description}
                     </p>
                   )}
 
                   {imageUrl && (
-                    <div className="rounded-lg overflow-hidden border border-slate-700">
+                    <div className="rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
                       <img
                         src={imageUrl}
                         alt={hazard.title}
@@ -235,14 +235,14 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                     </div>
                   )}
 
-                  <div className="text-[10px] text-slate-400 font-mono pt-1 border-t border-slate-700 space-y-0.5">
+                  <div className="text-[10px] text-slate-600 font-mono pt-1.5 border-t border-slate-100 space-y-0.5">
                     <div>📍 {hazard.latitude.toFixed(5)}, {hazard.longitude.toFixed(5)}</div>
                     <div>🕐 {new Date(hazard.created_at).toLocaleString()}</div>
-                    <div>📋 Status: {hazard.status}</div>
+                    <div>📋 Status: <span className="capitalize">{hazard.status}</span></div>
                   </div>
 
-                  <div className="text-[9px] text-slate-500 italic pt-1 border-t border-slate-700">
-                    User-submitted report — not verified by AI or authorities.
+                  <div className="text-[9px] text-slate-400 italic pt-1 border-t border-slate-100">
+                    User-submitted observation — not verified by AI or authorities.
                   </div>
                 </div>
               </Popup>

@@ -17,6 +17,13 @@ interface HazardReportFormProps {
   selectedLon: number;
   onReportCreated: () => void;
   onRequestLocation: () => void;
+  prefill?: {
+    title?: string;
+    description?: string;
+    hazard_type?: HazardType;
+    severity?: HazardSeverity;
+    imageFile?: File;
+  } | null;
 }
 
 const HAZARD_TYPES: { value: HazardType; label: string; emoji: string }[] = [
@@ -29,10 +36,10 @@ const HAZARD_TYPES: { value: HazardType; label: string; emoji: string }[] = [
 ];
 
 const SEVERITY_LEVELS: { value: HazardSeverity; label: string; color: string }[] = [
-  { value: 'low', label: 'Low', color: 'text-emerald-400 border-emerald-700 bg-emerald-950/50' },
-  { value: 'medium', label: 'Medium', color: 'text-amber-400 border-amber-700 bg-amber-950/50' },
-  { value: 'high', label: 'High', color: 'text-orange-400 border-orange-700 bg-orange-950/50' },
-  { value: 'critical', label: 'Critical', color: 'text-rose-400 border-rose-700 bg-rose-950/50' },
+  { value: 'low', label: 'Low', color: 'text-emerald-700 border-emerald-300 bg-emerald-50 font-semibold' },
+  { value: 'medium', label: 'Medium', color: 'text-amber-800 border-amber-300 bg-amber-50 font-semibold' },
+  { value: 'high', label: 'High', color: 'text-orange-800 border-orange-300 bg-orange-50 font-semibold' },
+  { value: 'critical', label: 'Critical', color: 'text-rose-700 border-rose-300 bg-rose-50 font-semibold' },
 ];
 
 export const HazardReportForm: React.FC<HazardReportFormProps> = ({
@@ -40,6 +47,7 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
   selectedLon,
   onReportCreated,
   onRequestLocation,
+  prefill,
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -53,6 +61,20 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
   const [success, setSuccess] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync prefilled data if provided (e.g. from AI Road Damage detection)
+  React.useEffect(() => {
+    if (prefill) {
+      if (prefill.title) setTitle(prefill.title);
+      if (prefill.description) setDescription(prefill.description);
+      if (prefill.hazard_type) setHazardType(prefill.hazard_type);
+      if (prefill.severity) setSeverity(prefill.severity);
+      if (prefill.imageFile) {
+        setImageFile(prefill.imageFile);
+        setImagePreview(URL.createObjectURL(prefill.imageFile));
+      }
+    }
+  }, [prefill]);
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,15 +162,15 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
   };
 
   return (
-    <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-amber-600 to-orange-600 flex items-center justify-center">
-            <AlertTriangle className="w-4 h-4 text-white" />
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
+            <AlertTriangle className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white">Report a Road Hazard</h3>
-            <p className="text-[10px] text-slate-400">User-submitted citizen report · Not AI-verified</p>
+            <h3 className="text-base font-bold text-slate-900">Report a Road Hazard</h3>
+            <p className="text-[11px] text-slate-500">Citizen-submitted observation · Not an AI-verified detection</p>
           </div>
         </div>
       </div>
@@ -156,8 +178,8 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Title */}
         <div>
-          <label htmlFor="hazard-title" className="block text-xs font-medium text-slate-300 mb-1">
-            Hazard Title <span className="text-rose-400">*</span>
+          <label htmlFor="hazard-title" className="block text-xs font-semibold text-slate-700 mb-1.5">
+            Hazard Title <span className="text-rose-500">*</span>
           </label>
           <input
             id="hazard-title"
@@ -165,24 +187,24 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={150}
-            placeholder="e.g. Deep pothole near bus stop"
-            className="w-full bg-slate-950/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-600 transition-all"
+            placeholder="e.g. Deep pothole near inner ring road"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:bg-white transition-all"
           />
         </div>
 
         {/* Hazard Type */}
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1.5">Hazard Type</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Hazard Type</label>
           <div className="grid grid-cols-3 gap-2">
             {HAZARD_TYPES.map((ht) => (
               <button
                 key={ht.value}
                 type="button"
                 onClick={() => setHazardType(ht.value)}
-                className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 justify-center ${
+                className={`px-2.5 py-2 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 justify-center ${
                   hazardType === ht.value
-                    ? 'bg-sky-600/20 border-sky-600 text-sky-300 shadow-sm shadow-sky-600/10'
-                    : 'bg-slate-950/40 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                    ? 'bg-sky-50 border-sky-300 text-sky-800 shadow-sm font-semibold'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
                 <span>{ht.emoji}</span>
@@ -194,17 +216,17 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
 
         {/* Severity */}
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1.5">Severity Level</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Severity Level</label>
           <div className="grid grid-cols-4 gap-2">
             {SEVERITY_LEVELS.map((sv) => (
               <button
                 key={sv.value}
                 type="button"
                 onClick={() => setSeverity(sv.value)}
-                className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                className={`px-2 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                   severity === sv.value
                     ? sv.color + ' shadow-sm'
-                    : 'bg-slate-950/40 border-slate-700 text-slate-400 hover:border-slate-600'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
                 {sv.label}
@@ -215,62 +237,63 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
 
         {/* Location */}
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1.5">
-            Location <span className="text-rose-400">*</span>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            Location <span className="text-rose-500">*</span>
           </label>
           <div className="flex items-center gap-2">
-            <div className="flex-1 bg-slate-950/60 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-300">
-              <MapPin className="w-3.5 h-3.5 text-sky-400 inline mr-1.5" />
+            <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-700 font-medium">
+              <MapPin className="w-3.5 h-3.5 text-sky-600 inline mr-1.5" />
               {selectedLat.toFixed(5)}, {selectedLon.toFixed(5)}
             </div>
             <button
               type="button"
               onClick={onRequestLocation}
-              className="px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white transition-all"
+              className="px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-sm transition-all"
             >
               Pick on Map
             </button>
           </div>
-          <p className="text-[10px] text-slate-500 mt-1">Click on the map above to set hazard location.</p>
+          <p className="text-[11px] text-slate-500 mt-1">Click anywhere on the map above to update these coordinates.</p>
         </div>
 
         {/* Description */}
         <div>
-          <label htmlFor="hazard-desc" className="block text-xs font-medium text-slate-300 mb-1">
-            Description <span className="text-slate-500">(optional)</span>
+          <label htmlFor="hazard-desc" className="block text-xs font-semibold text-slate-700 mb-1.5">
+            Description <span className="text-slate-400 font-normal">(optional)</span>
           </label>
           <textarea
             id="hazard-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            placeholder="Describe the hazard, approximate size, lane affected..."
-            className="w-full bg-slate-950/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-600 transition-all resize-none"
+            placeholder="Describe the hazard dimensions, lane obstruction, or surrounding landmarks..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:bg-white transition-all resize-none"
           />
         </div>
 
         {/* Image Upload */}
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1.5">
-            Photo Evidence <span className="text-slate-500">(optional, JPEG/PNG/WebP, max 10 MB)</span>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            Photo Evidence <span className="text-slate-400 font-normal">(optional, JPEG/PNG/WebP, max 10 MB)</span>
           </label>
 
           {imagePreview ? (
-            <div className="relative rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
+            <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
               <img
                 src={imagePreview}
                 alt="Preview"
-                className="w-full h-32 object-cover"
+                className="w-full h-36 object-cover"
               />
               <button
                 type="button"
                 onClick={clearImage}
-                className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm p-1 rounded-lg border border-slate-700 text-slate-300 hover:text-white hover:bg-rose-900/60 transition-all"
+                aria-label="Remove image"
+                className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-all shadow-sm"
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur-sm px-2 py-1 rounded-lg text-[10px] text-slate-300 border border-slate-700">
-                <ImageIcon className="w-3 h-3 inline mr-1" />
+              <div className="absolute bottom-2.5 left-2.5 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[11px] text-slate-700 border border-slate-200 font-mono shadow-sm">
+                <ImageIcon className="w-3.5 h-3.5 inline mr-1 text-sky-600" />
                 {imageFile?.name} ({((imageFile?.size || 0) / 1024).toFixed(0)} KB)
               </div>
             </div>
@@ -278,10 +301,10 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full border-2 border-dashed border-slate-700 rounded-xl py-6 flex flex-col items-center gap-2 text-slate-400 hover:border-sky-600 hover:text-sky-400 transition-all bg-slate-950/30"
+              className="w-full border-2 border-dashed border-slate-200 rounded-xl py-6 flex flex-col items-center gap-2 text-slate-500 hover:border-sky-400 hover:text-sky-600 hover:bg-sky-50/20 transition-all bg-slate-50/50"
             >
-              <Camera className="w-6 h-6" />
-              <span className="text-xs">Click to upload photo evidence</span>
+              <Camera className="w-6 h-6 text-slate-400" />
+              <span className="text-xs font-medium">Click to upload photo evidence</span>
             </button>
           )}
 
@@ -296,17 +319,17 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
 
         {/* Error Display */}
         {error && (
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-950/40 border border-rose-800/50 text-rose-300 text-xs">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Success Display */}
         {success && (
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 text-xs">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>Hazard report submitted successfully! It will appear on the map shortly.</span>
+          <div className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span>Hazard report submitted successfully! The marker is now visible on the map.</span>
           </div>
         )}
 
@@ -316,8 +339,8 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
           disabled={submitting || !title.trim()}
           className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
             submitting || !title.trim()
-              ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white hover:from-sky-500 hover:to-indigo-500 shadow-lg shadow-sky-600/20 active:scale-[0.98]'
+              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+              : 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white hover:from-sky-500 hover:to-indigo-500 shadow-md shadow-sky-600/20 active:scale-[0.99]'
           }`}
         >
           {submitting ? (
@@ -334,7 +357,7 @@ export const HazardReportForm: React.FC<HazardReportFormProps> = ({
         </button>
 
         <p className="text-[10px] text-slate-500 text-center">
-          This report is classified as a <strong>citizen-submitted observation</strong>, not an AI-verified detection.
+          Submitted records are saved as <strong>citizen observations</strong> for municipal review, not certified AI classifications.
         </p>
       </form>
     </div>

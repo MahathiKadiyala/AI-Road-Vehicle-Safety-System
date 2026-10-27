@@ -12,18 +12,18 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   pulse = false
 }) => {
   const variantStyles = {
-    success: 'bg-emerald-950/80 text-emerald-400 border-emerald-700/50',
-    warning: 'bg-amber-950/80 text-amber-400 border-amber-700/50',
-    danger: 'bg-rose-950/80 text-rose-400 border-rose-700/50',
-    info: 'bg-sky-950/80 text-sky-400 border-sky-700/50',
-    neutral: 'bg-slate-800 text-slate-300 border-slate-700'
+    success: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    warning: 'bg-amber-50 text-amber-800 border-amber-200/80',
+    danger: 'bg-rose-50 text-rose-700 border-rose-200/80',
+    info: 'bg-sky-50 text-sky-700 border-sky-200/80',
+    neutral: 'bg-slate-100 text-slate-700 border-slate-200'
   };
 
   const dotColors = {
-    success: 'bg-emerald-400',
-    warning: 'bg-amber-400',
-    danger: 'bg-rose-400',
-    info: 'bg-sky-400',
+    success: 'bg-emerald-500',
+    warning: 'bg-amber-500',
+    danger: 'bg-rose-500',
+    info: 'bg-sky-500',
     neutral: 'bg-slate-400'
   };
 

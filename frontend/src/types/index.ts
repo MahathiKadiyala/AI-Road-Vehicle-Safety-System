@@ -10,6 +10,8 @@ export interface DatabaseHealth {
   setup_guidance?: string | null;
 }
 
+export type HealthState = 'connecting' | 'healthy' | 'degraded_db' | 'degraded_postgis' | 'offline';
+
 export interface HealthResponse {
   status: string;
   project_name: string;
@@ -51,4 +53,50 @@ export interface Hospital {
   total_beds_reference?: number;
   is_verified_facility: boolean;
   created_at: string;
+}
+
+// ── Phase 3: Road-Damage Detection Types ───────────────────────────────────
+
+export interface BoundingBox {
+  xmin: number;
+  ymin: number;
+  xmax: number;
+  ymax: number;
+  width: number;
+  height: number;
+  pixel_box?: [number, number, number, number] | null;
+}
+
+export interface DamageDetectionItem {
+  class_id: number;
+  class_code: 'D00' | 'D10' | 'D20' | 'D40' | string;
+  class_name: string;
+  confidence: number;
+  box: BoundingBox;
+  suggested_hazard_type: string;
+  suggested_severity: string;
+}
+
+export interface DamageDetectionResponse {
+  success: boolean;
+  model_name: string;
+  model_version?: string;
+  device: string;
+  detections_count: number;
+  detections: DamageDetectionItem[];
+  inference_time_ms: number;
+  image_width: number;
+  image_height: number;
+  annotated_image_url?: string | null;
+  disclaimer: string;
+}
+
+export interface DamageModelStatusResponse {
+  available: boolean;
+  model_name: string;
+  model_path: string;
+  weights_present: boolean;
+  device: string;
+  supported_classes: Record<string, string>;
+  details?: string | null;
 }

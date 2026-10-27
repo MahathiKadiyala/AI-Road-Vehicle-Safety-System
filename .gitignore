@@ -47,8 +47,18 @@ lerna-debug.log*
 # Static Uploads & ML Artifacts
 backend/static/uploads/*
 !backend/static/uploads/.gitkeep
+static/uploads/*
+!static/uploads/.gitkeep
 backend/app/ml/artifacts/*
 !backend/app/ml/artifacts/.gitkeep
+datasets/
+data/
+runs/
+*.pt
+*.pth
+*.onnx
+*.engine
+yolov8*.pt
 
 # IDE & OS
 .vscode/

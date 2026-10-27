@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
+    # Machine Learning (Phase 3 Road Damage Detection)
+    ROAD_DAMAGE_MODEL_PATH: str = "app/ml/artifacts/road_damage_yolo.pt"
+    ML_DEVICE: str = "cpu"
+    DAMAGE_CONFIDENCE_THRESHOLD: float = 0.25
+
     @property
     def cors_origins_list(self) -> List[str]:
         """Convert comma-separated origins into a trimmed list."""
