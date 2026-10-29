@@ -1,6 +1,6 @@
 """Pydantic schemas for Road Hazard data transfer."""
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, List
 from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict, field_validator, computed_field
 
@@ -54,3 +54,34 @@ class HazardRead(HazardBase):
         if not self.image_path:
             return None
         return f"/static/{self.image_path}"
+
+
+class NearbyHazardSummary(BaseModel):
+    """Brief summary of a hazard within proximity."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title: str
+    hazard_type: str
+    severity: str
+    latitude: float
+    longitude: float
+    distance_meters: float = Field(..., ge=0.0, description="Straight-line distance from query center in meters")
+    created_at: datetime
+
+
+class HazardDensityResponse(BaseModel):
+    """Aggregated nearby-hazard density metrics for a query coordinate and radius."""
+    center_latitude: float = Field(..., ge=-90.0, le=90.0)
+    center_longitude: float = Field(..., ge=-180.0, le=180.0)
+    radius_meters: float = Field(..., ge=10.0, le=50000.0)
+    area_sqkm: float = Field(..., ge=0.0)
+    total_hazards: int = Field(..., ge=0)
+    density_per_sqkm: float = Field(..., ge=0.0)
+    by_type: Dict[str, int] = Field(default_factory=dict)
+    by_severity: Dict[str, int] = Field(default_factory=dict)
+    critical_and_high_count: int = Field(default=0, ge=0)
+    spatial_engine: str = Field(..., description="'postgis' or 'haversine_fallback'")
+    hazards_with_missing_geometry_count: int = Field(default=0, ge=0)
+    advisory_notes: List[str] = Field(default_factory=list)
+    nearby_hazards: List[NearbyHazardSummary] = Field(default_factory=list)

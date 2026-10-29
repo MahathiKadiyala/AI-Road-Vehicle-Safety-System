@@ -13,8 +13,9 @@ from sqlalchemy import select, func
 
 from app.core.database import get_db
 from app.core.storage import validate_and_save_image, get_image_url, delete_image_file
+from app.core.spatial import create_point_geometry, spatial_service, SpatialServiceUnavailableError
 from app.models.hazard import Hazard
-from app.schemas.hazard import HazardRead
+from app.schemas.hazard import HazardRead, HazardDensityResponse
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,9 @@ async def create_hazard_report(
                 detail=f"Image upload failed: {str(e)}",
             )
 
+    # --- Build PostGIS Point geometry (SRID 4326: X=longitude, Y=latitude) ---
+    point_geom = create_point_geometry(latitude=latitude, longitude=longitude)
+
     # --- Persist to database ---
     try:
         new_hazard = Hazard(
@@ -100,6 +104,7 @@ async def create_hazard_report(
             severity=severity_lower,
             latitude=latitude,
             longitude=longitude,
+            geom=point_geom,
             image_path=image_path,
             source="citizen_report",
             status="reported",
@@ -183,6 +188,55 @@ async def list_hazard_reports(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Failed to retrieve hazard reports. Database may be unavailable.",
+        )
+
+
+@router.get(
+    "/density",
+    response_model=HazardDensityResponse,
+    summary="Compute nearby hazard density within a specified radius",
+)
+async def get_hazard_density(
+    latitude: float = Query(..., ge=-90.0, le=90.0, description="Center WGS84 Latitude (-90 to 90)"),
+    longitude: float = Query(..., ge=-180.0, le=180.0, description="Center WGS84 Longitude (-180 to 180)"),
+    radius_meters: float = Query(
+        default=1000.0,
+        ge=10.0,
+        le=50000.0,
+        description="Search radius in meters (10m to 50,000m)",
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """Calculate nearby hazard counts, breakdowns, and density for given coordinates.
+
+    Executes PostGIS ST_DWithin with meter-based Geography casting.
+    Falls back gracefully to Haversine bounding-box calculation when PostGIS is not available.
+    """
+    try:
+        return await spatial_service.query_hazard_density(
+            db=db,
+            latitude=latitude,
+            longitude=longitude,
+            radius_meters=radius_meters,
+        )
+    except SpatialServiceUnavailableError as srv_err:
+        logger.error(f"Spatial service unavailable: {srv_err}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Spatial density service unavailable: {str(srv_err)}",
+        )
+    except ValueError as val_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(val_err),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Error computing hazard density: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to compute hazard density. Database may be unavailable.",
         )
 
 

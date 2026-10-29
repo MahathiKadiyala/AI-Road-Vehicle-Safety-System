@@ -36,7 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'damage', label: 'AI Road Damage', badge: 'Phase 3', icon: <Sparkles className="w-3.5 h-3.5 text-indigo-500" /> },
     { id: 'vehicle', label: 'Vehicle Safety', badge: 'Phase 4 Active', icon: <Gauge className="w-3.5 h-3.5 text-sky-600" /> },
     { id: 'risk', label: 'Accident Risk & SHAP', badge: 'Phase 5' },
-    { id: 'emergency', label: 'Emergency Support', badge: 'Phase 6' },
+    { id: 'emergency', label: 'Emergency Support', badge: 'Phase 5.3', icon: <Ambulance className="w-3.5 h-3.5 text-rose-500" /> },
   ];
 
   const healthState = computeHealthState(health, loadingHealth);

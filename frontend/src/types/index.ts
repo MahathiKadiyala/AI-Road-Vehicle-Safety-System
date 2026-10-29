@@ -152,3 +152,101 @@ export interface VehicleStandardsResponse {
   disclaimer: string;
   version: string;
 }
+
+// ── Phase 5: Accident Risk Prediction Types ───────────────────────────────
+
+export interface RiskModelStatus {
+  available: boolean;
+  status: 'MODEL_AVAILABLE' | 'MODEL_UNAVAILABLE' | 'TRAINING_DATA_UNAVAILABLE';
+  model_version?: string | null;
+  model_architecture: string;
+  dataset_provenance: string;
+  training_date?: string | null;
+  evaluation_metrics?: Record<string, number> | null;
+  details: string;
+  features_expected: string[];
+  missing_dependencies: string[];
+}
+
+export interface RiskPredictionPayload {
+  latitude: number;
+  longitude: number;
+  road_classification: string;
+  speed_limit_kmh: number;
+  surface_condition: string;
+  lighting_condition: string;
+  weather_condition: string;
+  search_radius_meters: number;
+  vehicle_safety_score?: number | null;
+}
+
+export interface FeatureContributionItem {
+  feature_name: string;
+  feature_value: any;
+  attribution_value: number;
+  direction: 'increases_risk' | 'decreases_risk';
+  description: string;
+}
+
+export interface RiskPredictionResult {
+  prediction_id: string;
+  status: 'success' | 'model_unavailable';
+  risk_tier: 'Low' | 'Medium' | 'High' | 'Critical' | 'Unavailable';
+  risk_score: number | null;
+  risk_score_interpretation: string;
+  model_version: string;
+  corridor_coordinates: { latitude: number; longitude: number };
+  spatial_hazard_density: Record<string, any>;
+  features_used: Record<string, any>;
+  feature_contributions: FeatureContributionItem[];
+  actionable_recommendations: string[];
+  disclaimer: string;
+  evaluated_at: string;
+}
+
+export interface HazardDensitySummary {
+  center_latitude: number;
+  center_longitude: number;
+  radius_meters: number;
+  area_sqkm: number;
+  total_hazards: number;
+  density_per_sqkm: number;
+  by_type: Record<string, number>;
+  by_severity: Record<string, number>;
+  critical_and_high_count: number;
+  spatial_engine: string;
+  hazards_with_missing_geometry_count: number;
+  advisory_notes: string[];
+}
+
+
+// ── Phase 5.3: Hospital & Emergency Proximity Types ─────────────────────────
+
+export interface NearbyHospital {
+  id: string;
+  name: string;
+  facility_type: string;
+  latitude: number;
+  longitude: number;
+  straight_line_distance_meters: number;
+  straight_line_distance_km: number;
+  address?: string | null;
+  contact_phone?: string | null;
+  has_emergency_service: boolean;
+  total_beds_reference?: number | null;
+  is_verified_facility: boolean;
+  data_source: string;
+}
+
+export interface NearbyHospitalsResponse {
+  center_latitude: number;
+  center_longitude: number;
+  search_radius_meters: number;
+  total_found: number;
+  spatial_engine: string;
+  emergency_only_filter: boolean;
+  hospitals: NearbyHospital[];
+  advisory_notes: string[];
+  emergency_helplines_india: Record<string, string>;
+  disclaimer: string;
+}

@@ -71,6 +71,7 @@ class MockHazard:
         self.image_path = kwargs.get("image_path", None)
         self.source = kwargs.get("source", "citizen_report")
         self.status = kwargs.get("status", "reported")
+        self.geom = kwargs.get("geom", None)
         self.created_at = kwargs.get("created_at", datetime.now(timezone.utc))
         self.updated_at = kwargs.get("updated_at", datetime.now(timezone.utc))
 
@@ -133,6 +134,7 @@ class MockAsyncSession:
                     image_path=obj.image_path,
                     source=obj.source,
                     status=obj.status,
+                    geom=getattr(obj, "geom", None),
                 )
                 _mock_hazard_store.append(mock)
                 # Copy the id back to the ORM object for refresh simulation
@@ -190,6 +192,7 @@ _test_upload_dir = tempfile.mkdtemp(prefix="test_uploads_")
 def _setup_test_env(monkeypatch):
     """Set up test environment for each test."""
     _reset_store()
+    app.dependency_overrides[get_db] = _mock_get_db
     monkeypatch.setattr("app.core.config.settings.UPLOAD_DIR", _test_upload_dir)
     monkeypatch.setattr("app.core.storage.settings.UPLOAD_DIR", _test_upload_dir)
     yield
@@ -743,3 +746,33 @@ async def test_orphaned_image_cleanup_on_db_error():
     assert test_file.exists()
     assert delete_image_file(str(test_file)) is True
     assert not test_file.exists()
+
+
+@pytest.mark.asyncio
+async def test_create_hazard_persists_valid_point_geometry():
+    """Verify that hazard creation populates geom as PostGIS POINT (SRID 4326) with X=lon, Y=lat."""
+    from geoalchemy2.elements import WKTElement
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        form_data = {
+            "title": "Geometry Verification Pothole",
+            "hazard_type": "pothole",
+            "severity": "high",
+            "latitude": "12.9716",
+            "longitude": "77.5946",
+        }
+
+        resp = await client.post("/api/v1/hazards", data=form_data)
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["latitude"] == 12.9716
+        assert data["longitude"] == 77.5946
+
+        # Verify the stored hazard in the database has geom populated
+        stored = [h for h in _mock_hazard_store if str(h.id) == data["id"]][0]
+        assert stored.geom is not None
+        assert isinstance(stored.geom, WKTElement)
+        assert stored.geom.srid == 4326
+        # Longitude is X (first), Latitude is Y (second)
+        assert stored.geom.data == "POINT(77.5946 12.9716)"

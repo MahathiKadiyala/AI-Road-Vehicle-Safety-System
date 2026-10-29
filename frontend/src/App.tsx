@@ -9,6 +9,8 @@ import { HazardReportForm } from './components/hazards/HazardReportForm';
 import { HazardReportList } from './components/hazards/HazardReportList';
 import { DamageDetectionView } from './components/damage/DamageDetectionView';
 import { VehicleAssessmentView } from './components/vehicle/VehicleAssessmentView';
+import { AccidentRiskView } from './components/risk/AccidentRiskView';
+import { EmergencySupportView } from './components/emergency/EmergencySupportView';
 import {
   Database,
   MapPin,
@@ -252,11 +254,15 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Tab Content: Phase 3 AI Road Damage View vs. Phase 4 Vehicle Safety vs. Map & Citizen Hazard View */}
+        {/* Tab Content: Phase 3 Damage vs. Phase 4 Vehicle vs. Phase 5 Risk vs. Phase 5.3 Emergency vs. Map */}
         {activeTab === 'damage' ? (
           <DamageDetectionView onPrefillHazard={handlePrefillHazard} />
         ) : activeTab === 'vehicle' ? (
           <VehicleAssessmentView />
+        ) : activeTab === 'risk' ? (
+          <AccidentRiskView />
+        ) : activeTab === 'emergency' ? (
+          <EmergencySupportView />
         ) : (
           <>
             {/* Map & Hazard Reporting Section */}
@@ -356,29 +362,29 @@ export const App: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-white/80 border border-slate-200/80 p-5 rounded-2xl shadow-xs space-y-2">
+            <div className="bg-white border border-purple-200 p-5 rounded-2xl shadow-sm space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-600">Phase 5</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
-                  Planned
+                <span className="text-xs font-semibold text-slate-700">Phase 5.1-5.2</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-medium">
+                  Active
                 </span>
               </div>
-              <h4 className="text-sm font-bold text-slate-800">Accident Risk & SHAP</h4>
+              <h4 className="text-sm font-bold text-slate-900">Accident Risk & Density</h4>
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                XGBoost classifier with TreeSHAP waterfall charts explaining individual risk factor contributions.
+                PostGIS spatial density probes, genuine accident dataset pipeline, and explainable risk framework.
               </p>
             </div>
 
-            <div className="bg-white/80 border border-slate-200/80 p-5 rounded-2xl shadow-xs space-y-2">
+            <div className="bg-white border border-rose-200 p-5 rounded-2xl shadow-sm space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-600">Phase 6</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
-                  Planned
+                <span className="text-xs font-semibold text-slate-700">Phase 5.3</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-medium">
+                  Active
                 </span>
               </div>
-              <h4 className="text-sm font-bold text-slate-800">Emergency Support</h4>
+              <h4 className="text-sm font-bold text-slate-900">Hospital & Emergency</h4>
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                Verified trauma hospital locator and advisory hazard-bypassing corridor routing.
+                Verified trauma hospital locator with PostGIS meter proximity and Haversine fallback.
               </p>
             </div>
           </div>

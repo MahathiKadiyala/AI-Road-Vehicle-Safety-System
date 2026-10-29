@@ -7,6 +7,12 @@ import {
   VehicleAssessmentPayload,
   VehicleAssessmentResult,
   VehicleStandardsResponse,
+  RiskModelStatus,
+  RiskPredictionPayload,
+  RiskPredictionResult,
+  HazardDensitySummary,
+  NearbyHospital,
+  NearbyHospitalsResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -304,6 +310,134 @@ export async function fetchVehicleAssessmentById(
 
   if (!response.ok) {
     throw new Error(`Failed to load vehicle assessment ${id} (HTTP ${response.status})`);
+  }
+
+  return await response.json();
+}
+
+
+// ── Phase 5: Accident-Risk Prediction & Spatial Density API ────────────────
+
+/**
+ * Fetch real nearby hazard density from PostGIS spatial service.
+ */
+export async function fetchHazardDensity(
+  latitude: number,
+  longitude: number,
+  radiusMeters: number = 1000
+): Promise<HazardDensitySummary> {
+  const params = new URLSearchParams({
+    latitude: latitude.toString(),
+    longitude: longitude.toString(),
+    radius_meters: radiusMeters.toString(),
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/hazards/density?${params.toString()}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || `Failed to fetch hazard density (HTTP ${response.status})`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Query operational status and data provenance of the accident risk model.
+ */
+export async function fetchRiskModelStatus(): Promise<RiskModelStatus> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/risk/status`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to query risk model status: HTTP ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Request road-segment accident risk prediction.
+ */
+export async function predictAccidentRisk(
+  payload: RiskPredictionPayload
+): Promise<RiskPredictionResult> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/risk/predict`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const detail = errorData?.detail;
+
+    let message = `Risk prediction failed (HTTP ${response.status})`;
+    if (typeof detail === 'string') {
+      message = detail;
+    } else if (typeof detail === 'object' && detail?.message) {
+      message = detail.message;
+    }
+    throw new Error(message);
+  }
+
+  return await response.json();
+}
+
+
+// ── Phase 5.3: Hospital & Emergency Proximity API ─────────────────────────
+
+/**
+ * Fetch verified hospitals and trauma centers within a given radius.
+ */
+export async function fetchNearbyHospitals(
+  latitude: number,
+  longitude: number,
+  radiusMeters: number = 10000,
+  emergencyOnly: boolean = false,
+  limit: number = 20
+): Promise<NearbyHospitalsResponse> {
+  const params = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    radius_meters: String(radiusMeters),
+    emergency_only: String(emergencyOnly),
+    limit: String(limit),
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/hospitals/nearby?${params.toString()}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const detail = errorData?.detail || `HTTP ${response.status}`;
+    throw new Error(`Failed to fetch nearby hospitals: ${detail}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Fetch a single hospital facility by its ID.
+ */
+export async function fetchHospitalById(id: string): Promise<NearbyHospital> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/hospitals/${id}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch hospital: HTTP ${response.status}`);
   }
 
   return await response.json();
