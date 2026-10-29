@@ -1,4 +1,13 @@
-import { HealthResponse, HealthState, Hazard, DamageDetectionResponse, DamageModelStatusResponse } from '../types';
+import {
+  HealthResponse,
+  HealthState,
+  Hazard,
+  DamageDetectionResponse,
+  DamageModelStatusResponse,
+  VehicleAssessmentPayload,
+  VehicleAssessmentResult,
+  VehicleStandardsResponse,
+} from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const REQUEST_TIMEOUT_MS = 8000;
@@ -226,6 +235,75 @@ export async function detectRoadDamage(
       message = detail.message;
     }
     throw new Error(message);
+  }
+
+  return await response.json();
+}
+
+// ── Phase 4: Vehicle Safety Assessment API ─────────────────────────────────
+
+/**
+ * Fetch verified statutory and technical vehicle safety standards registry.
+ */
+export async function fetchVehicleStandards(): Promise<VehicleStandardsResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/vehicles/standards`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load vehicle safety standards (HTTP ${response.status})`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Submit vehicle parameters for deterministic safety and statutory compliance evaluation.
+ */
+export async function assessVehicle(
+  payload: VehicleAssessmentPayload
+): Promise<VehicleAssessmentResult> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/vehicles/assess`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const detail = errorData?.detail;
+
+    let message = `Vehicle assessment failed (HTTP ${response.status})`;
+    if (typeof detail === 'string') {
+      message = detail;
+    } else if (Array.isArray(detail)) {
+      message = detail.map((err: any) => `${err.loc?.slice(-1)[0]}: ${err.msg}`).join(', ');
+    } else if (typeof detail === 'object' && detail?.message) {
+      message = detail.message;
+    }
+    throw new Error(message);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Retrieve a previously persisted vehicle safety assessment by ID.
+ */
+export async function fetchVehicleAssessmentById(
+  id: string
+): Promise<VehicleAssessmentResult> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/vehicles/${id}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load vehicle assessment ${id} (HTTP ${response.status})`);
   }
 
   return await response.json();

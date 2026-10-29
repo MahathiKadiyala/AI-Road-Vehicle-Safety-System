@@ -17,9 +17,9 @@ class VehicleAssessment(Base):
     year = Column(Integer, nullable=False)
     odometer_km = Column(Float, nullable=False)
     
-    # Critical mechanical measurements
-    brake_pad_thickness_mm = Column(Float, nullable=False)
-    tyre_tread_depth_mm = Column(Float, nullable=False)
+    # Critical mechanical measurements (nullable when physical measurement is missing/unverified)
+    brake_pad_thickness_mm = Column(Float, nullable=True)
+    tyre_tread_depth_mm = Column(Float, nullable=True)
     service_records_count = Column(Integer, nullable=False, default=0)
     past_accidents_count = Column(Integer, nullable=False, default=0)
 
@@ -27,7 +27,8 @@ class VehicleAssessment(Base):
     preliminary_score = Column(Float, nullable=False)  # 0.0 to 100.0
     risk_tier = Column(String(30), nullable=False)     # Low, Moderate, High, Critical
     critical_warnings = Column(JSON, nullable=False, default=list)
-    legal_disclaimer_version = Column(String(50), nullable=False, default="CMVR-Preliminary-v1.0")
+    assessment_details = Column(JSON, nullable=True, default=dict)
+    legal_disclaimer_version = Column(String(50), nullable=False, default="CMVR-AIS-Advisory-v2.0")
     disclaimer_acknowledged = Column(Boolean, nullable=False, default=True)
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)

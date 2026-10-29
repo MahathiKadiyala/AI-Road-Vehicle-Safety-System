@@ -100,3 +100,55 @@ export interface DamageModelStatusResponse {
   supported_classes: Record<string, string>;
   details?: string | null;
 }
+
+// ── Phase 4: Vehicle Safety Assessment Types ───────────────────────────────
+
+export interface ParameterAuditItem {
+  parameter: string;
+  measured_value: string | number;
+  status: 'compliant' | 'warning' | 'violation' | 'unverified';
+  is_statutory: boolean;
+  statutory_reference: string;
+  finding: string;
+  recommendation: string;
+  deduction_applied: number;
+}
+
+export interface VehicleAssessmentPayload {
+  make: string;
+  model: string;
+  year: number;
+  odometer_km: number;
+  vehicle_category?: string;
+  brake_pad_thickness_mm?: number | null;
+  tyre_tread_depth_mm?: number | null;
+  service_records_count: number;
+  past_accidents_count: number;
+  puc_valid?: boolean | null;
+  insurance_valid?: boolean | null;
+  fitness_certificate_valid?: boolean | null;
+  disclaimer_acknowledged: boolean;
+}
+
+export interface VehicleAssessmentResult extends VehicleAssessmentPayload {
+  id: string;
+  preliminary_score: number;
+  risk_tier: 'Low' | 'Moderate' | 'High' | 'Critical';
+  vehicle_category: string;
+  critical_warnings: string[];
+  statutory_violations: string[];
+  advisory_warnings: string[];
+  parameter_breakdown: ParameterAuditItem[];
+  missing_unverified_attributes: string[];
+  data_completeness: string;
+  document_verification_source: string;
+  disclaimer_text: string;
+  legal_disclaimer_version: string;
+  created_at: string;
+}
+
+export interface VehicleStandardsResponse {
+  standards: Record<string, any>;
+  disclaimer: string;
+  version: string;
+}

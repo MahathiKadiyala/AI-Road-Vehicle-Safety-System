@@ -121,23 +121,29 @@ class MockAsyncSession:
     async def commit(self):
         # Simulate saving by copying to mock store
         for obj in self._added:
-            mock = MockHazard(
-                id=uuid4(),
-                title=obj.title,
-                description=obj.description,
-                hazard_type=obj.hazard_type,
-                severity=obj.severity,
-                latitude=obj.latitude,
-                longitude=obj.longitude,
-                image_path=obj.image_path,
-                source=obj.source,
-                status=obj.status,
-            )
-            _mock_hazard_store.append(mock)
-            # Copy the id back to the ORM object for refresh simulation
-            obj.id = mock.id
-            obj.created_at = mock.created_at
-            obj.updated_at = mock.updated_at
+            if hasattr(obj, "title"):
+                mock = MockHazard(
+                    id=uuid4(),
+                    title=obj.title,
+                    description=obj.description,
+                    hazard_type=obj.hazard_type,
+                    severity=obj.severity,
+                    latitude=obj.latitude,
+                    longitude=obj.longitude,
+                    image_path=obj.image_path,
+                    source=obj.source,
+                    status=obj.status,
+                )
+                _mock_hazard_store.append(mock)
+                # Copy the id back to the ORM object for refresh simulation
+                obj.id = mock.id
+                obj.created_at = mock.created_at
+                obj.updated_at = mock.updated_at
+            else:
+                if not getattr(obj, "id", None):
+                    obj.id = uuid4()
+                if not getattr(obj, "created_at", None):
+                    obj.created_at = datetime.now(timezone.utc)
         self._added.clear()
 
     async def refresh(self, obj):

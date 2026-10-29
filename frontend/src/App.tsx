@@ -8,6 +8,7 @@ import { MapContainer } from './components/map/MapContainer';
 import { HazardReportForm } from './components/hazards/HazardReportForm';
 import { HazardReportList } from './components/hazards/HazardReportList';
 import { DamageDetectionView } from './components/damage/DamageDetectionView';
+import { VehicleAssessmentView } from './components/vehicle/VehicleAssessmentView';
 import {
   Database,
   MapPin,
@@ -112,7 +113,7 @@ export const App: React.FC = () => {
     buyer: {
       title: 'Used-Vehicle Buyer Experience',
       desc: 'Transparent tyre tread depth and brake pad condition assessment against CMVR Rule 95 legal standards.',
-      phase: 'Phase 4 Planned'
+      phase: 'Phase 4 Active'
     },
     ambulance: {
       title: 'Ambulance Emergency Support',
@@ -251,9 +252,11 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Tab Content: Phase 3 AI Road Damage View vs. Map & Citizen Hazard View */}
+        {/* Tab Content: Phase 3 AI Road Damage View vs. Phase 4 Vehicle Safety vs. Map & Citizen Hazard View */}
         {activeTab === 'damage' ? (
           <DamageDetectionView onPrefillHazard={handlePrefillHazard} />
+        ) : activeTab === 'vehicle' ? (
+          <VehicleAssessmentView />
         ) : (
           <>
             {/* Map & Hazard Reporting Section */}
@@ -340,14 +343,14 @@ export const App: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-white/80 border border-slate-200/80 p-5 rounded-2xl shadow-xs space-y-2">
+            <div className="bg-white border border-sky-200 p-5 rounded-2xl shadow-sm space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-600">Phase 4</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
-                  Planned
+                <span className="text-xs font-semibold text-slate-700">Phase 4</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 font-medium">
+                  Active
                 </span>
               </div>
-              <h4 className="text-sm font-bold text-slate-800">Vehicle Safety Index</h4>
+              <h4 className="text-sm font-bold text-slate-900">Vehicle Safety Index</h4>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 Deterministic tyre tread wear (CMVR Rule 95) & brake pad analysis with advisory disclaimers.
               </p>

@@ -1,7 +1,12 @@
 """Pydantic data validation schemas."""
 from app.schemas.health import HealthResponse, DatabaseHealth
 from app.schemas.hazard import HazardBase, HazardCreate, HazardRead
-from app.schemas.vehicle import VehicleAssessmentCreate, VehicleAssessmentRead
+from app.schemas.vehicle import (
+    VehicleAssessmentCreate,
+    VehicleAssessmentRead,
+    ParameterAuditItem,
+    VehicleStandardsResponse,
+)
 from app.schemas.hospital import HospitalBase, HospitalRead
 from app.schemas.damage_detection import (
     BoundingBox,
@@ -18,6 +23,8 @@ __all__ = [
     "HazardRead",
     "VehicleAssessmentCreate",
     "VehicleAssessmentRead",
+    "ParameterAuditItem",
+    "VehicleStandardsResponse",
     "HospitalBase",
     "HospitalRead",
     "BoundingBox",

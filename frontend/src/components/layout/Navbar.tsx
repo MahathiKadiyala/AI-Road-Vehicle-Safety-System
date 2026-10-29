@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'map', label: 'Map & Live Overview', icon: <Layers className="w-4 h-4" /> },
     { id: 'hazards', label: 'Road Hazards', badge: 'Phase 2' },
     { id: 'damage', label: 'AI Road Damage', badge: 'Phase 3', icon: <Sparkles className="w-3.5 h-3.5 text-indigo-500" /> },
-    { id: 'vehicle', label: 'Vehicle Safety', badge: 'Phase 4' },
+    { id: 'vehicle', label: 'Vehicle Safety', badge: 'Phase 4 Active', icon: <Gauge className="w-3.5 h-3.5 text-sky-600" /> },
     { id: 'risk', label: 'Accident Risk & SHAP', badge: 'Phase 5' },
     { id: 'emergency', label: 'Emergency Support', badge: 'Phase 6' },
   ];
@@ -69,8 +69,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-900 text-base tracking-tight">AI-Road-Safety</span>
-                <span className="px-1.5 py-0.5 text-[10px] uppercase font-mono bg-indigo-50 text-indigo-700 border border-indigo-200 rounded font-semibold">
-                  Phase 3 Active
+                <span className="px-1.5 py-0.5 text-[10px] uppercase font-mono bg-sky-50 text-sky-700 border border-sky-200 rounded font-semibold">
+                  Phase 4 Active
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 hidden sm:block">Road Hazard & Vehicle Risk Intelligence</p>
