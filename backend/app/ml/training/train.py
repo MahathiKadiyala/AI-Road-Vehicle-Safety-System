@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import platform
+import random
 import shutil
 import sys
 from datetime import datetime
@@ -17,6 +18,11 @@ from typing import Dict, Any, Optional
 import torch
 import ultralytics
 from ultralytics import YOLO
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("rdd_train")
@@ -68,13 +74,21 @@ def train_road_damage_model(
 
     estimate_resource_requirements(epochs, batch_size, img_size, device)
 
+    # Set seeds for full reproducibility
+    random.seed(seed)
+    if np is not None:
+        np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
     # Initialize YOLO model
     logger.info(f"Loading initial model weights from: {base_model}")
     model = YOLO(base_model)
 
     start_time = datetime.now()
 
-    # Launch training
+    # Launch reproducible training
     logger.info("Starting YOLO training run...")
     results = model.train(
         data=str(data_path),
@@ -86,6 +100,8 @@ def train_road_damage_model(
         name=name,
         patience=patience,
         seed=seed,
+        deterministic=True,
+        workers=0,  # Single-process data loading to prevent Windows spawn deadlocks
         lr0=learning_rate,
         plots=True,
         save=True,

@@ -162,7 +162,7 @@ export interface RiskModelStatus {
   model_architecture: string;
   dataset_provenance: string;
   training_date?: string | null;
-  evaluation_metrics?: Record<string, number> | null;
+  evaluation_metrics?: Record<string, any> | null;
   details: string;
   features_expected: string[];
   missing_dependencies: string[];

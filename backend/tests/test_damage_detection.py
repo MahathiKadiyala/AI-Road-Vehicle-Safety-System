@@ -273,3 +273,112 @@ def test_convert_dataset_end_to_end(tmp_path):
     yaml_text = (output_dir / "data.yaml").read_text()
     assert "D00" in yaml_text
     assert "D40" in yaml_text
+
+
+# ── Step 5: Phase 7 YOLO Dataset Validator Tests ─────────────────────────────
+
+def test_validate_yolo_dataset_on_valid_structure(tmp_path):
+    """Verify validate_yolo_dataset approves a correct YOLO dataset with paired images/labels."""
+    from app.ml.dataset.convert_rdd import validate_yolo_dataset
+
+    ds_root = tmp_path / "valid_yolo_ds"
+    (ds_root / "images" / "train").mkdir(parents=True)
+    (ds_root / "images" / "val").mkdir(parents=True)
+    (ds_root / "labels" / "train").mkdir(parents=True)
+    (ds_root / "labels" / "val").mkdir(parents=True)
+
+    # Add 1 sample in train, 1 in val
+    im_train = Image.new("RGB", (100, 100), color="red")
+    im_train.save(ds_root / "images" / "train" / "img1.jpg")
+    (ds_root / "labels" / "train" / "img1.txt").write_text("0 0.5 0.5 0.2 0.3\n3 0.2 0.2 0.1 0.1\n")
+
+    im_val = Image.new("RGB", (100, 100), color="green")
+    im_val.save(ds_root / "images" / "val" / "img2.jpg")
+    (ds_root / "labels" / "val" / "img2.txt").write_text("1 0.4 0.4 0.3 0.3\n")
+
+    report = validate_yolo_dataset(ds_root)
+    assert report["is_valid"] is True
+    assert report["total_images"] == 2
+    assert report["total_labels"] == 2
+    assert report["data_leakage_detected"] is False
+    assert report["class_distribution"]["train"]["D00"] == 1
+    assert report["class_distribution"]["train"]["D40"] == 1
+    assert report["class_distribution"]["val"]["D10"] == 1
+    assert len(report["errors"]) == 0
+
+
+def test_validate_yolo_dataset_detects_orphan_and_missing_labels(tmp_path):
+    """Verify validate_yolo_dataset catches unpaired images and labels."""
+    from app.ml.dataset.convert_rdd import validate_yolo_dataset
+
+    ds_root = tmp_path / "unpaired_ds"
+    (ds_root / "images" / "train").mkdir(parents=True)
+    (ds_root / "labels" / "train").mkdir(parents=True)
+
+    # Image without label
+    Image.new("RGB", (50, 50), color="blue").save(ds_root / "images" / "train" / "alone_img.jpg")
+    # Label without image
+    (ds_root / "labels" / "train" / "orphan_lbl.txt").write_text("0 0.5 0.5 0.1 0.1\n")
+
+    report = validate_yolo_dataset(ds_root)
+    assert report["is_valid"] is False
+    assert any("Missing label file" in e for e in report["errors"])
+    assert any("Orphan label file" in e for e in report["errors"])
+
+
+def test_validate_yolo_dataset_detects_invalid_class_and_corrupt_box(tmp_path):
+    """Verify validator catches class indices not in {0, 1, 2, 3} and out-of-bound boxes."""
+    from app.ml.dataset.convert_rdd import validate_yolo_dataset
+
+    ds_root = tmp_path / "invalid_labels_ds"
+    (ds_root / "images" / "train").mkdir(parents=True)
+    (ds_root / "labels" / "train").mkdir(parents=True)
+
+    Image.new("RGB", (50, 50)).save(ds_root / "images" / "train" / "bad.jpg")
+    # Class 99 is invalid; box coordinate 1.5 is out of bounds
+    (ds_root / "labels" / "train" / "bad.txt").write_text("99 0.5 0.5 0.1 0.1\n0 1.5 0.5 0.1 0.1\n")
+
+    report = validate_yolo_dataset(ds_root)
+    assert report["is_valid"] is False
+    assert any("Invalid class index 99" in e for e in report["errors"])
+    assert any("out of bounds" in e for e in report["errors"])
+
+
+def test_validate_yolo_dataset_accepts_background_images(tmp_path):
+    """Verify validator accepts empty label files as valid negative background samples."""
+    from app.ml.dataset.convert_rdd import validate_yolo_dataset
+
+    ds_root = tmp_path / "bg_ds"
+    (ds_root / "images" / "train").mkdir(parents=True)
+    (ds_root / "labels" / "train").mkdir(parents=True)
+
+    Image.new("RGB", (50, 50)).save(ds_root / "images" / "train" / "background.jpg")
+    (ds_root / "labels" / "train" / "background.txt").write_text("")
+
+    report = validate_yolo_dataset(ds_root)
+    assert report["is_valid"] is True
+    assert report["background_images"] == 1
+
+
+def test_validate_yolo_dataset_detects_cross_split_leakage(tmp_path):
+    """Verify validator flags duplicate images shared between train and validation splits."""
+    from app.ml.dataset.convert_rdd import validate_yolo_dataset
+
+    ds_root = tmp_path / "leakage_ds"
+    (ds_root / "images" / "train").mkdir(parents=True)
+    (ds_root / "images" / "val").mkdir(parents=True)
+    (ds_root / "labels" / "train").mkdir(parents=True)
+    (ds_root / "labels" / "val").mkdir(parents=True)
+
+    # Identical image in train and val
+    im = Image.new("RGB", (64, 64), color="yellow")
+    im.save(ds_root / "images" / "train" / "shared.jpg")
+    im.save(ds_root / "images" / "val" / "shared_dup.jpg")
+
+    (ds_root / "labels" / "train" / "shared.txt").write_text("0 0.5 0.5 0.2 0.2\n")
+    (ds_root / "labels" / "val" / "shared_dup.txt").write_text("0 0.5 0.5 0.2 0.2\n")
+
+    report = validate_yolo_dataset(ds_root)
+    assert report["is_valid"] is False
+    assert report["data_leakage_detected"] is True
+    assert any("DATA LEAKAGE DETECTED" in e for e in report["errors"])

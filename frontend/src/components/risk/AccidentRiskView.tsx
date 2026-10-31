@@ -3,6 +3,7 @@ import {
   ShieldAlert,
   Sparkles,
   AlertTriangle,
+  CheckCircle2,
   RotateCcw,
   MapPin,
   Activity,
@@ -170,44 +171,108 @@ export const AccidentRiskView: React.FC<AccidentRiskViewProps> = ({
           </div>
         </div>
 
-        {/* Honest Model Status Diagnostic Banner */}
-        <div className="mt-4 p-4 rounded-xl border bg-slate-50 border-slate-200">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-amber-100 text-amber-800 mt-0.5">
-              <AlertTriangle className="w-4 h-4" />
+        {/* Loading Skeleton */}
+        {loadingStatus && (
+          <div className="mt-4 p-4 rounded-xl border bg-slate-50 border-slate-200 animate-pulse flex items-center gap-3">
+            <div className="w-5 h-5 rounded-full bg-slate-200 shrink-0" />
+            <div className="space-y-1.5 flex-1">
+              <div className="h-3 w-1/4 bg-slate-200 rounded" />
+              <div className="h-2.5 w-3/4 bg-slate-200 rounded" />
             </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                  Model State:
-                </span>
-                <span className="text-xs font-mono font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                  {loadingStatus ? 'Checking...' : modelStatus?.status || 'TRAINING_DATA_UNAVAILABLE'}
-                </span>
+          </div>
+        )}
+
+        {/* Honest Model Status Diagnostic Banner */}
+        {!loadingStatus && (
+          <div className={`mt-4 p-4 rounded-xl border ${
+            modelStatus?.available
+              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+              : 'bg-slate-50 border-slate-200 text-slate-800'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`p-2 rounded-lg mt-0.5 ${
+                modelStatus?.available
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-amber-100 text-amber-800'
+              }`}>
+                {modelStatus?.available ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4" />
+                )}
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {modelStatus?.details ||
-                  'Accident risk prediction model weights are not loaded. Machine learning inference requires authentic calibrated crash data.'}
-              </p>
-              {statusError && (
-                <div className="text-xs text-rose-600 mt-1 font-mono">
-                  Notice: {statusError}
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                    Model State:
+                  </span>
+                  <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded border ${
+                    modelStatus?.available
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      : 'text-amber-700 bg-amber-50 border-amber-200'
+                  }`}>
+                    {modelStatus?.status || 'TRAINING_DATA_UNAVAILABLE'}
+                  </span>
                 </div>
-              )}
-              <div className="pt-2 text-[11px] text-slate-500 flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span>
-                  <strong>Architecture:</strong> {modelStatus?.model_architecture || 'XGBoost + TreeSHAP'}
-                </span>
-                <span>
-                  <strong>Provenance:</strong> {modelStatus?.dataset_provenance || 'Awaiting verified records'}
-                </span>
-                <span>
-                  <strong>Zero Fake Predictions Rule:</strong> Active
-                </span>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {modelStatus?.details ||
+                    'Accident risk prediction model weights are not loaded. Machine learning inference requires authentic calibrated crash data.'}
+                </p>
+                {statusError && (
+                  <div className="text-xs text-rose-600 mt-1 font-mono">
+                    Notice: {statusError}
+                  </div>
+                )}
+                <div className="pt-2 text-[11px] text-slate-500 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span>
+                    <strong>Architecture:</strong> {modelStatus?.model_architecture || 'XGBoost + TreeSHAP / Calibrated Logistic Baseline'}
+                  </span>
+                  <span>
+                    <strong>Provenance:</strong> {modelStatus?.dataset_provenance || 'Awaiting verified records'}
+                  </span>
+                  <span>
+                    <strong>Zero Fake Predictions Rule:</strong> Active
+                  </span>
+                </div>
+
+                {/* If authentic evaluation metrics are available, render metrics summary grid */}
+                {modelStatus?.evaluation_metrics && (
+                  <div className="mt-3 pt-3 border-t border-slate-200/80 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 font-mono block">
+                      Authentic Holdout Evaluation Metrics:
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                      {typeof modelStatus.evaluation_metrics.roc_auc === 'number' && (
+                        <div className="bg-white/90 p-2 rounded-lg border border-slate-200">
+                          <span className="text-[10px] text-slate-500 block">ROC-AUC</span>
+                          <span className="font-bold text-indigo-700">{modelStatus.evaluation_metrics.roc_auc.toFixed(4)}</span>
+                        </div>
+                      )}
+                      {typeof modelStatus.evaluation_metrics.pr_auc === 'number' && (
+                        <div className="bg-white/90 p-2 rounded-lg border border-slate-200">
+                          <span className="text-[10px] text-slate-500 block">PR-AUC</span>
+                          <span className="font-bold text-indigo-700">{modelStatus.evaluation_metrics.pr_auc.toFixed(4)}</span>
+                        </div>
+                      )}
+                      {typeof modelStatus.evaluation_metrics.brier_score === 'number' && (
+                        <div className="bg-white/90 p-2 rounded-lg border border-slate-200">
+                          <span className="text-[10px] text-slate-500 block">Brier Score</span>
+                          <span className="font-bold text-slate-800">{modelStatus.evaluation_metrics.brier_score.toFixed(4)}</span>
+                        </div>
+                      )}
+                      {typeof modelStatus.evaluation_metrics.accuracy === 'number' && (
+                        <div className="bg-white/90 p-2 rounded-lg border border-slate-200">
+                          <span className="text-[10px] text-slate-500 block">Accuracy</span>
+                          <span className="font-bold text-emerald-700">{(modelStatus.evaluation_metrics.accuracy * 100).toFixed(1)}%</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Main Grid: Corridor Form (Left) & Live Spatial Density / Pipeline Spec (Right) */}
@@ -264,9 +329,14 @@ export const AccidentRiskView: React.FC<AccidentRiskViewProps> = ({
                   step="any"
                   value={latitude}
                   onChange={(e) => setLatitude(parseFloat(e.target.value) || 0)}
-                  className="w-full text-xs font-mono px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className={`w-full text-xs font-mono px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                    latitude < -90 || latitude > 90 ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
+                  }`}
                   required
                 />
+                {(latitude < -90 || latitude > 90) && (
+                  <span className="text-[10px] text-rose-600 block mt-0.5">Bounds: [-90, 90]°N</span>
+                )}
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
@@ -277,9 +347,14 @@ export const AccidentRiskView: React.FC<AccidentRiskViewProps> = ({
                   step="any"
                   value={longitude}
                   onChange={(e) => setLongitude(parseFloat(e.target.value) || 0)}
-                  className="w-full text-xs font-mono px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className={`w-full text-xs font-mono px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                    longitude < -180 || longitude > 180 ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
+                  }`}
                   required
                 />
+                {(longitude < -180 || longitude > 180) && (
+                  <span className="text-[10px] text-rose-600 block mt-0.5">Bounds: [-180, 180]°E</span>
+                )}
               </div>
             </div>
 
@@ -309,12 +384,17 @@ export const AccidentRiskView: React.FC<AccidentRiskViewProps> = ({
                 </label>
                 <input
                   type="number"
-                  min="20"
-                  max="140"
+                  min="10"
+                  max="160"
                   value={speedLimit}
                   onChange={(e) => setSpeedLimit(parseInt(e.target.value) || 50)}
-                  className="w-full text-xs font-mono px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className={`w-full text-xs font-mono px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                    speedLimit < 10 || speedLimit > 160 ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
+                  }`}
                 />
+                {(speedLimit < 10 || speedLimit > 160) && (
+                  <span className="text-[10px] text-rose-600 block mt-0.5">Range: 10–160 km/h</span>
+                )}
               </div>
             </div>
 

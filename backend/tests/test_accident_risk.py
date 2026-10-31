@@ -204,3 +204,140 @@ async def test_predict_risk_returns_503_when_model_untrained():
         # Verify spatial hazard density is returned even when model is unavailable
         assert "spatial_hazard_density" in detail
         assert "total_hazards" in detail["spatial_hazard_density"]
+
+
+# ==============================================================================
+# 6. Phase 7: Evaluation Metrics & Calibration Unit Tests
+# ==============================================================================
+
+def test_metrics_confusion_matrix_and_classification():
+    """Verify exact calculation of confusion matrix, precision, recall, F1, and accuracy."""
+    from app.ml.risk.metrics import compute_classification_metrics, compute_confusion_matrix
+
+    y_true = [1, 1, 0, 0, 1, 0]
+    y_pred = [1, 0, 0, 0, 1, 1]
+
+    cm = compute_confusion_matrix(y_true, y_pred)
+    assert cm["tp"] == 2
+    assert cm["fp"] == 1
+    assert cm["tn"] == 2
+    assert cm["fn"] == 1
+
+    metrics = compute_classification_metrics(y_true, y_pred)
+    assert metrics["accuracy"] == round(4 / 6, 4)
+    assert metrics["precision"] == round(2 / 3, 4)
+    assert metrics["recall"] == round(2 / 3, 4)
+    assert metrics["f1"] == round(2 / 3, 4)
+    assert metrics["specificity"] == round(2 / 3, 4)
+
+
+def test_metrics_roc_auc_and_pr_auc():
+    """Verify ROC-AUC and PR-AUC trapezoidal integration."""
+    from app.ml.risk.metrics import compute_roc_auc, compute_pr_auc
+
+    # Perfect ranking
+    y_true = [1, 1, 0, 0]
+    y_prob = [0.9, 0.8, 0.2, 0.1]
+    assert compute_roc_auc(y_true, y_prob) == 1.0
+    assert compute_pr_auc(y_true, y_prob) == 1.0
+
+    # Inverted ranking
+    y_prob_inv = [0.1, 0.2, 0.8, 0.9]
+    assert compute_roc_auc(y_true, y_prob_inv) == 0.0
+
+    # Edge cases (all positive or all negative)
+    assert compute_roc_auc([1, 1, 1], [0.9, 0.5, 0.2]) == 0.5
+    assert compute_roc_auc([0, 0, 0], [0.9, 0.5, 0.2]) == 0.5
+
+
+def test_metrics_brier_score_and_calibration():
+    """Verify Brier calibration score and binned Expected Calibration Error (ECE)."""
+    from app.ml.risk.metrics import compute_brier_score, compute_calibration_curve
+
+    y_true = [1, 0, 1, 0]
+    # Perfect probabilities
+    assert compute_brier_score(y_true, [1.0, 0.0, 1.0, 0.0]) == 0.0
+    # Worst probabilities
+    assert compute_brier_score(y_true, [0.0, 1.0, 0.0, 1.0]) == 1.0
+
+    calib = compute_calibration_curve(y_true, [0.9, 0.1, 0.8, 0.2], n_bins=5)
+    assert "expected_calibration_error" in calib
+    assert len(calib["bins"]) == 5
+    assert calib["expected_calibration_error"] >= 0.0
+
+
+def test_comprehensive_evaluate_risk_model():
+    """Verify evaluate_risk_model outputs all required Phase 7 metrics."""
+    from app.ml.risk.metrics import evaluate_risk_model
+
+    y_true = [1, 0, 1, 1, 0, 0, 1, 0]
+    y_prob = [0.85, 0.15, 0.70, 0.90, 0.25, 0.10, 0.65, 0.30]
+
+    report = evaluate_risk_model(y_true, y_prob, threshold=0.5, n_calibration_bins=4)
+    assert "roc_auc" in report
+    assert "pr_auc" in report
+    assert "brier_score" in report
+    assert "accuracy" in report
+    assert "f1" in report
+    assert "confusion_matrix" in report
+    assert "calibration_bins" in report
+    assert report["roc_auc"] >= 0.8  # Strong ranking for this sample
+
+
+# ==============================================================================
+# 7. Phase 7: Training Pipeline and Predictor Integration Tests
+# ==============================================================================
+
+@pytest.mark.asyncio
+async def test_reproducible_risk_training_pipeline_and_predictor(tmp_path):
+    """Verify end-to-end training pipeline, artifact serialization, and live prediction execution."""
+    from app.ml.risk.train import train_risk_model
+    from app.ml.risk.predictor import AccidentRiskPredictor
+    from app.schemas.risk import RiskPredictionRequest
+
+    out_dir = tmp_path / "artifacts"
+
+    # Train reproducible baseline model on sample CSV fixture
+    results = train_risk_model(
+        csv_path=SAMPLE_CSV_PATH,
+        output_dir=out_dir,
+        split_method="location",
+        holdout_fraction=0.25,
+        seed=42,
+        algorithm="logistic",
+    )
+
+    assert Path(results["artifact_path"]).exists()
+    assert Path(results["metadata_path"]).exists()
+    assert "roc_auc" in results["metrics"]
+    assert "brier_score" in results["metrics"]
+
+    # Verify custom predictor initializes and reports MODEL_AVAILABLE
+    predictor = AccidentRiskPredictor(model_artifact_path=str(results["artifact_path"]))
+    status = predictor.get_status()
+    assert status.available is True
+    assert status.status == "MODEL_AVAILABLE"
+    assert status.evaluation_metrics is not None
+
+    # Test prediction execution
+    req = RiskPredictionRequest(
+        latitude=12.9716,
+        longitude=77.5946,
+        road_classification="urban_arterial",
+        speed_limit_kmh=50.0,
+        surface_condition="dry",
+        lighting_condition="daylight",
+        weather_condition="clear",
+        vehicle_safety_score=85.0,
+    )
+    spatial_density = {
+        "pothole_count": 2,
+        "crack_count": 5,
+        "density_per_sqkm": 3.5,
+    }
+
+    pred_resp = await predictor.predict_async(req, spatial_density)
+    assert 0.0 <= pred_resp.risk_score <= 100.0
+    assert pred_resp.risk_tier in ("Low", "Medium", "High", "Critical")
+    assert len(pred_resp.feature_contributions) > 0
+    assert any(f.feature_name == "vehicle_safety_score" for f in pred_resp.feature_contributions)

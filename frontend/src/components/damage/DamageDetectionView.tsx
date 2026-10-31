@@ -195,15 +195,31 @@ export const DamageDetectionView: React.FC<DamageDetectionViewProps> = ({ onPref
         </div>
 
         {/* Model Pending Warning Box (Non-blocking) */}
+        {loadingStatus && (
+          <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl animate-pulse flex items-center gap-3">
+            <div className="w-5 h-5 rounded-full bg-slate-200 shrink-0" />
+            <div className="space-y-1.5 flex-1">
+              <div className="h-3 w-1/4 bg-slate-200 rounded" />
+              <div className="h-2.5 w-2/3 bg-slate-200 rounded" />
+            </div>
+          </div>
+        )}
+
         {!loadingStatus && !modelStatus?.available && (
-          <div className="mt-4 p-4 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-3">
-            <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="font-semibold">Trained YOLO weights file is not loaded yet.</p>
-              <p className="text-amber-800">
-                {modelStatus?.details ||
-                  'Place your trained road_damage_yolo.pt weights in backend/app/ml/artifacts/ or run the training pipeline with convert_rdd.py and train.py.'}
-              </p>
+          <div className="mt-4 p-4 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-2">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold text-amber-900">Trained YOLO weights file is not loaded yet.</p>
+                <p className="text-amber-800 leading-relaxed">
+                  {modelStatus?.details ||
+                    'Place your trained road_damage_yolo.pt weights in backend/app/ml/artifacts/ or run the training pipeline with convert_rdd.py and train.py.'}
+                </p>
+              </div>
+            </div>
+            <div className="pl-8 pt-2 border-t border-amber-200/60 font-mono text-[11px] text-amber-900">
+              <span className="font-sans font-semibold block text-[10px] uppercase text-amber-800 mb-0.5">Dataset Verification Command:</span>
+              <code className="bg-amber-100/70 px-2 py-0.5 rounded text-amber-950">python -m app.ml.dataset.convert_rdd --validate-only &lt;dataset_dir&gt;</code>
             </div>
           </div>
         )}
@@ -271,6 +287,26 @@ export const DamageDetectionView: React.FC<DamageDetectionViewProps> = ({ onPref
               </p>
               <p className="text-xs text-slate-500 mt-1">JPEG, PNG, or WebP up to 10 MB</p>
             </div>
+
+            {selectedFile && (
+              <div className="flex items-center justify-between p-2.5 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs">
+                <span className="truncate text-indigo-950 font-medium max-w-[200px]">{selectedFile.name}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
+                    setResult(null);
+                    setErrorMsg(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="text-xs text-rose-600 hover:text-rose-800 font-semibold px-2 py-0.5 rounded hover:bg-rose-50 cursor-pointer"
+                >
+                  Clear Image
+                </button>
+              </div>
+            )}
 
             {/* Confidence Slider */}
             <div className="space-y-2 pt-2 border-t border-slate-100">

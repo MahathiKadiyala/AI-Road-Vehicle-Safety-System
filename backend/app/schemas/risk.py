@@ -132,7 +132,7 @@ class RiskModelStatusResponse(BaseModel):
     model_architecture: str = "XGBoost Classifier + TreeSHAP"
     dataset_provenance: str = "Awaiting verified historical road accident records"
     training_date: Optional[str] = None
-    evaluation_metrics: Optional[Dict[str, float]] = None
+    evaluation_metrics: Optional[Dict[str, Any]] = None
     details: str
     features_expected: List[str]
     missing_dependencies: List[str] = Field(default_factory=list)

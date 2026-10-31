@@ -363,7 +363,7 @@ export const App: React.FC = () => {
             Approved Development Modules & Status
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
             <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-700">Phase 2</span>
@@ -439,6 +439,19 @@ export const App: React.FC = () => {
               <h4 className="text-sm font-bold text-slate-900">Cross-Module Integration</h4>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 Interconnected workflows across map pins, damage detection, vehicle profiles, risk models, and dispatch.
+              </p>
+            </div>
+
+            <div className="bg-white border border-amber-200 p-5 rounded-2xl shadow-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-700">Phase 7</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+                  Active
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-slate-900">ML Training & Readiness</h4>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                YOLO dataset validator, leakage-free holdout splits, and probabilistic ROC-AUC / Brier evaluation.
               </p>
             </div>
           </div>

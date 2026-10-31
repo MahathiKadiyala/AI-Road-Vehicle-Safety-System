@@ -23,7 +23,7 @@ import random
 import shutil
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("rdd_converter")
@@ -313,15 +313,217 @@ descriptions:
     return report
 
 
+def validate_yolo_dataset(dataset_dir: str | Path) -> Dict[str, Any]:
+    """Validate a YOLO format dataset for road damage detection.
+
+    Validates:
+      - Directory layout: images/{train,val} and labels/{train,val}.
+      - Class indices: strictly in {0, 1, 2, 3} for D00, D10, D20, D40.
+      - Image and label pairing (no orphan labels or missing annotations).
+      - Label bounds: normalized (xc, yc, w, h) in [0.0, 1.0].
+      - Empty labels treated as intentional negative background samples.
+      - Image duplicate leakage across splits using MD5 checksums.
+
+    Args:
+        dataset_dir: Root directory of YOLO dataset.
+
+    Returns:
+        Structured audit report dict.
+    """
+    root = Path(dataset_dir).resolve()
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    if not root.exists():
+        return {
+            "is_valid": False,
+            "dataset_path": str(root),
+            "errors": [f"Dataset root directory does not exist: {root}"],
+            "warnings": [],
+            "splits_found": [],
+            "total_images": 0,
+            "total_labels": 0,
+            "background_images": 0,
+            "class_distribution": {},
+            "data_leakage_detected": False,
+        }
+
+    images_dir = root / "images"
+    labels_dir = root / "labels"
+
+    if not images_dir.exists():
+        errors.append(f"Missing 'images' directory in {root}")
+    if not labels_dir.exists():
+        errors.append(f"Missing 'labels' directory in {root}")
+
+    if errors:
+        return {
+            "is_valid": False,
+            "dataset_path": str(root),
+            "errors": errors,
+            "warnings": warnings,
+            "splits_found": [],
+            "total_images": 0,
+            "total_labels": 0,
+            "background_images": 0,
+            "class_distribution": {},
+            "data_leakage_detected": False,
+        }
+
+    splits = [d.name for d in images_dir.iterdir() if d.is_dir()]
+    if not splits:
+        errors.append(f"No split subdirectories (e.g. 'train', 'val') found in {images_dir}")
+
+    total_images = 0
+    total_labels = 0
+    background_images = 0
+    class_distribution: Dict[str, Dict[str, int]] = {}
+    image_hashes_by_split: Dict[str, Dict[str, str]] = {}
+    leakage_records: List[Dict[str, str]] = []
+
+    valid_img_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+
+    for split in splits:
+        class_distribution[split] = {c: 0 for c in CLASS_NAMES}
+        split_img_dir = images_dir / split
+        split_lbl_dir = labels_dir / split
+
+        if not split_lbl_dir.exists():
+            warnings.append(f"Split '{split}' has an images folder but no matching 'labels/{split}' folder.")
+            continue
+
+        images = [p for p in split_img_dir.iterdir() if p.suffix.lower() in valid_img_extensions]
+        labels = [p for p in split_lbl_dir.iterdir() if p.suffix.lower() == ".txt"]
+
+        total_images += len(images)
+        total_labels += len(labels)
+
+        image_stems = {img.stem: img for img in images}
+        label_stems = {lbl.stem: lbl for lbl in labels}
+
+        # Check image hashes for cross-split leakage
+        image_hashes_by_split[split] = {}
+        for img in images:
+            h = calculate_image_hash(img)
+            image_hashes_by_split[split][h] = img.name
+
+        # Find orphan labels (label exists without corresponding image)
+        for stem, lbl_path in label_stems.items():
+            if stem not in image_stems:
+                errors.append(f"[{split}] Orphan label file without matching image: {lbl_path.name}")
+
+        # Validate label contents and missing labels
+        for stem, img_path in image_stems.items():
+            if stem not in label_stems:
+                errors.append(f"[{split}] Missing label file for image: {img_path.name}")
+                continue
+
+            lbl_file = label_stems[stem]
+            try:
+                content = lbl_file.read_text(encoding="utf-8").strip()
+            except Exception as e:
+                errors.append(f"[{split}] Could not read label file {lbl_file.name}: {e}")
+                continue
+
+            if not content:
+                # Valid negative/background sample
+                background_images += 1
+                continue
+
+            lines = content.splitlines()
+            for line_no, line in enumerate(lines, start=1):
+                tokens = line.strip().split()
+                if not tokens:
+                    continue
+                if len(tokens) != 5:
+                    errors.append(
+                        f"[{split}:{lbl_file.name}:L{line_no}] Invalid YOLO line format (expected 5 tokens, got {len(tokens)}): '{line}'"
+                    )
+                    continue
+
+                class_str, xc_str, yc_str, w_str, h_str = tokens
+                try:
+                    class_id = int(class_str)
+                except ValueError:
+                    errors.append(f"[{split}:{lbl_file.name}:L{line_no}] Non-integer class index: '{class_str}'")
+                    continue
+
+                if class_id not in (0, 1, 2, 3):
+                    errors.append(
+                        f"[{split}:{lbl_file.name}:L{line_no}] Invalid class index {class_id}. "
+                        "Target classes must be strictly in {0: D00, 1: D10, 2: D20, 3: D40}."
+                    )
+                    continue
+
+                class_name = CLASS_NAMES[class_id]
+                class_distribution[split][class_name] += 1
+
+                try:
+                    xc, yc, w, h = float(xc_str), float(yc_str), float(w_str), float(h_str)
+                except ValueError:
+                    errors.append(f"[{split}:{lbl_file.name}:L{line_no}] Non-numeric bbox values in line: '{line}'")
+                    continue
+
+                if not (0.0 <= xc <= 1.0 and 0.0 <= yc <= 1.0 and 0.0 < w <= 1.0 and 0.0 < h <= 1.0):
+                    errors.append(
+                        f"[{split}:{lbl_file.name}:L{line_no}] Bbox coordinates out of bounds [0, 1]: ({xc}, {yc}, {w}, {h})"
+                    )
+
+    # Check for cross-split data leakage (identical image in multiple splits)
+    split_names = list(image_hashes_by_split.keys())
+    for i in range(len(split_names)):
+        for j in range(i + 1, len(split_names)):
+            s1, s2 = split_names[i], split_names[j]
+            overlap = set(image_hashes_by_split[s1].keys()).intersection(set(image_hashes_by_split[s2].keys()))
+            for h in overlap:
+                img1 = image_hashes_by_split[s1][h]
+                img2 = image_hashes_by_split[s2][h]
+                leakage_records.append({
+                    "split_a": s1,
+                    "image_a": img1,
+                    "split_b": s2,
+                    "image_b": img2,
+                    "hash": h,
+                })
+                errors.append(
+                    f"DATA LEAKAGE DETECTED: Image duplicate present across '{s1}' ({img1}) and '{s2}' ({img2})."
+                )
+
+    is_valid = len(errors) == 0
+
+    return {
+        "is_valid": is_valid,
+        "dataset_path": str(root),
+        "splits_found": splits,
+        "total_images": total_images,
+        "total_labels": total_labels,
+        "background_images": background_images,
+        "class_distribution": class_distribution,
+        "data_leakage_detected": len(leakage_records) > 0,
+        "leakage_records": leakage_records,
+        "errors": errors[:50],  # Cap to prevent giant outputs
+        "warnings": warnings[:50],
+    }
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Convert RDD2020/2022 dataset to YOLO format.")
-    parser.add_argument("--rdd-dir", type=str, required=True, help="Path to RDD dataset folder.")
+    parser = argparse.ArgumentParser(description="Convert RDD2020/2022 dataset to YOLO format or validate existing.")
+    parser.add_argument("--rdd-dir", type=str, help="Path to RDD dataset folder.")
     parser.add_argument("--output-dir", type=str, default="datasets/road_damage_yolo", help="Destination YOLO folder.")
     parser.add_argument("--train-ratio", type=float, default=0.70, help="Train ratio.")
     parser.add_argument("--val-ratio", type=float, default=0.15, help="Val ratio.")
     parser.add_argument("--test-ratio", type=float, default=0.15, help="Test ratio.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for splitting.")
+    parser.add_argument("--validate-only", type=str, help="Path to existing YOLO dataset to validate.")
     args = parser.parse_args()
+
+    if args.validate_only:
+        report = validate_yolo_dataset(args.validate_only)
+        print(json.dumps(report, indent=2))
+        return
+
+    if not args.rdd_dir:
+        parser.error("--rdd-dir is required when not using --validate-only.")
 
     convert_dataset(
         rdd_root=args.rdd_dir,
