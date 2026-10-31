@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer as LeafletMap, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MapPin, Navigation, Eye, Crosshair } from 'lucide-react';
+import { MapPin, Navigation, Eye, Crosshair, ShieldAlert, Ambulance } from 'lucide-react';
 import { Hazard } from '../../types';
 import { getHazardImageUrl } from '../../services/api';
 
@@ -12,6 +12,8 @@ interface MapContainerProps {
   onLocationSelect?: (lat: number, lon: number) => void;
   hazards?: Hazard[];
   focusHazard?: Hazard | null;
+  onNavigateToRisk?: (lat: number, lon: number) => void;
+  onNavigateToEmergency?: (lat: number, lon: number) => void;
 }
 
 // Severity-based marker colors
@@ -107,6 +109,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   onLocationSelect,
   hazards = [],
   focusHazard,
+  onNavigateToRisk,
+  onNavigateToEmergency,
 }) => {
   const [clickedCoord, setClickedCoord] = useState<{ lat: number; lon: number } | null>({
     lat: initialLat,
@@ -193,6 +197,30 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                 <p className="text-[10px] text-slate-500 pt-1 border-t border-slate-100">
                   Use the report form to submit a hazard report at this location.
                 </p>
+                {(onNavigateToRisk || onNavigateToEmergency) && (
+                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
+                    {onNavigateToRisk && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateToRisk(clickedCoord.lat, clickedCoord.lon)}
+                        className="w-full text-[10px] font-bold px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <ShieldAlert className="w-3 h-3 text-indigo-600" />
+                        <span>Assess Corridor Risk Here</span>
+                      </button>
+                    )}
+                    {onNavigateToEmergency && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateToEmergency(clickedCoord.lat, clickedCoord.lon)}
+                        className="w-full text-[10px] font-bold px-2 py-1 rounded-md bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <Ambulance className="w-3 h-3 text-rose-600" />
+                        <span>Find Hospitals Near Pin</span>
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -244,6 +272,31 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                   <div className="text-[9px] text-slate-400 italic pt-1 border-t border-slate-100">
                     User-submitted observation — not verified by AI or authorities.
                   </div>
+
+                  {(onNavigateToRisk || onNavigateToEmergency) && (
+                    <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
+                      {onNavigateToRisk && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateToRisk(hazard.latitude, hazard.longitude)}
+                          className="w-full text-[10px] font-bold px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <ShieldAlert className="w-3 h-3 text-indigo-600" />
+                          <span>Assess Corridor Risk</span>
+                        </button>
+                      )}
+                      {onNavigateToEmergency && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateToEmergency(hazard.latitude, hazard.longitude)}
+                          className="w-full text-[10px] font-bold px-2 py-1 rounded-md bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <Ambulance className="w-3 h-3 text-rose-600" />
+                          <span>Locate Nearby Hospitals</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Popup>
             </Marker>

@@ -6,14 +6,17 @@ import {
   MapPin,
   Clock,
   ImageIcon,
-  ChevronRight,
   FileWarning,
+  ShieldAlert,
+  Ambulance,
 } from 'lucide-react';
 
 interface HazardReportListProps {
   hazards: Hazard[];
   loading: boolean;
   onSelectHazard?: (hazard: Hazard) => void;
+  onNavigateToRisk?: (lat: number, lon: number) => void;
+  onNavigateToEmergency?: (lat: number, lon: number) => void;
 }
 
 const severityStyles: Record<string, { bg: string; text: string; dot: string; border: string }> = {
@@ -51,6 +54,8 @@ export const HazardReportList: React.FC<HazardReportListProps> = ({
   hazards,
   loading,
   onSelectHazard,
+  onNavigateToRisk,
+  onNavigateToEmergency,
 }) => {
   if (loading) {
     return (
@@ -84,60 +89,111 @@ export const HazardReportList: React.FC<HazardReportListProps> = ({
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100 max-h-[430px] overflow-y-auto">
+        <div className="divide-y divide-slate-100 max-h-[460px] overflow-y-auto">
           {hazards.map((hazard) => {
             const sv = severityStyles[hazard.severity] || severityStyles.medium;
             const imageUrl = getHazardImageUrl(hazard.image_url);
 
             return (
-              <button
+              <div
                 key={hazard.id}
-                onClick={() => onSelectHazard?.(hazard)}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50/80 transition-colors text-left group"
+                className="w-full px-5 py-3.5 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
               >
-                {/* Thumbnail or type icon */}
-                <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center shadow-xs">
-                  {imageUrl ? (
-                    <img src={imageUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-lg">{hazardTypeEmoji[hazard.hazard_type] || '⚠️'}</span>
-                  )}
-                </div>
-
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-900 truncate">
-                      {hazard.title}
-                    </span>
-                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${sv.bg} ${sv.text} ${sv.border}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${sv.dot}`} />
-                      <span className="capitalize">{hazard.severity}</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-slate-400" />
-                      {hazard.latitude.toFixed(4)}, {hazard.longitude.toFixed(4)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-400" />
-                      {formatRelativeTime(hazard.created_at)}
-                    </span>
-                    {hazard.image_url && (
-                      <span className="flex items-center gap-0.5 text-sky-600 font-medium">
-                        <ImageIcon className="w-3 h-3" />
-                        photo
-                      </span>
+                {/* Main clickable info */}
+                <div
+                  onClick={() => onSelectHazard?.(hazard)}
+                  className="flex items-start gap-3.5 cursor-pointer flex-1 min-w-0"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectHazard?.(hazard);
+                    }
+                  }}
+                  title="Click to view and fly to location on map"
+                >
+                  {/* Thumbnail or type icon */}
+                  <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center shadow-xs">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-lg">{hazardTypeEmoji[hazard.hazard_type] || '⚠️'}</span>
                     )}
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5 capitalize">
-                    {hazardTypeEmoji[hazard.hazard_type]} {hazard.hazard_type} · {hazard.source.replace('_', ' ')} · status: {hazard.status}
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-slate-900 truncate">
+                        {hazard.title}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${sv.bg} ${sv.text} ${sv.border}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${sv.dot}`} />
+                        <span className="capitalize">{hazard.severity}</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        {hazard.latitude.toFixed(4)}, {hazard.longitude.toFixed(4)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        {formatRelativeTime(hazard.created_at)}
+                      </span>
+                      {hazard.image_url && (
+                        <span className="flex items-center gap-0.5 text-sky-600 font-medium">
+                          <ImageIcon className="w-3 h-3" />
+                          photo
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-[10px] text-slate-400 mt-0.5 capitalize">
+                      {hazardTypeEmoji[hazard.hazard_type]} {hazard.hazard_type} · {hazard.source.replace('_', ' ')} · status: {hazard.status}
+                    </div>
                   </div>
                 </div>
 
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-sky-600 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </button>
+                {/* Workflow Actions */}
+                <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                  {onSelectHazard && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectHazard(hazard)}
+                      className="px-2 py-1 rounded-lg text-[10px] font-semibold text-slate-600 hover:text-sky-700 bg-slate-100 hover:bg-sky-50 border border-slate-200/80 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Focus on map"
+                    >
+                      <MapPin className="w-3 h-3 text-sky-600" />
+                      <span className="hidden md:inline">Map</span>
+                    </button>
+                  )}
+                  {onNavigateToRisk && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToRisk(hazard.latitude, hazard.longitude)}
+                      className="px-2 py-1 rounded-lg text-[10px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Assess Corridor Risk at this location"
+                    >
+                      <ShieldAlert className="w-3 h-3 text-indigo-600" />
+                      <span>Risk</span>
+                    </button>
+                  )}
+                  {onNavigateToEmergency && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToEmergency(hazard.latitude, hazard.longitude)}
+                      className="px-2 py-1 rounded-lg text-[10px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Locate hospitals near this hazard"
+                    >
+                      <Ambulance className="w-3 h-3 text-rose-600" />
+                      <span>Hospitals</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
@@ -145,3 +201,4 @@ export const HazardReportList: React.FC<HazardReportListProps> = ({
     </div>
   );
 };
+export default HazardReportList;

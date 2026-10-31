@@ -22,7 +22,11 @@ import {
 } from '../../types';
 import { assessVehicle, fetchVehicleStandards } from '../../services/api';
 
-export const VehicleAssessmentView: React.FC = () => {
+interface VehicleAssessmentViewProps {
+  onApplyToRisk?: (score: number) => void;
+}
+
+export const VehicleAssessmentView: React.FC<VehicleAssessmentViewProps> = ({ onApplyToRisk }) => {
   // Form input state
   const [make, setMake] = useState<string>('Maruti Suzuki');
   const [model, setModel] = useState<string>('Swift VXi');
@@ -774,6 +778,19 @@ export const VehicleAssessmentView: React.FC = () => {
                   <span>Document Source:</span>
                   <span className="font-mono text-[10px] text-amber-800 font-semibold">{result.document_verification_source}</span>
                 </div>
+
+                {onApplyToRisk && (
+                  <div className="mt-4 pt-3 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => onApplyToRisk(result.preliminary_score)}
+                      className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <ShieldAlert className="w-4 h-4 text-indigo-200" />
+                      <span>Assess Corridor Risk with this Vehicle Profile ({result.preliminary_score.toFixed(1)}/100)</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Critical Statutory Violations Banner */}

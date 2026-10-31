@@ -31,6 +31,9 @@ export const App: React.FC = () => {
     lon: 77.5946
   });
 
+  // Cross-workflow state
+  const [vehicleScore, setVehicleScore] = useState<number | null>(null);
+
   // Phase 2: Hazard reporting state
   const [hazards, setHazards] = useState<Hazard[]>([]);
   const [loadingHazards, setLoadingHazards] = useState<boolean>(false);
@@ -86,6 +89,27 @@ export const App: React.FC = () => {
     setTimeout(() => setFocusHazard(null), 2000);
   }, []);
 
+  const handleNavigateToRisk = useCallback((lat: number, lon: number, score?: number) => {
+    setSelectedCoord({ lat, lon });
+    if (score !== undefined) {
+      setVehicleScore(score);
+    }
+    setActiveTab('risk');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleNavigateToEmergency = useCallback((lat: number, lon: number) => {
+    setSelectedCoord({ lat, lon });
+    setActiveTab('emergency');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleNavigateToMap = useCallback((lat: number, lon: number) => {
+    setSelectedCoord({ lat, lon });
+    setActiveTab('map');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const handlePrefillHazard = (data: {
     hazard_type: string;
     severity: string;
@@ -120,12 +144,12 @@ export const App: React.FC = () => {
     ambulance: {
       title: 'Ambulance Emergency Support',
       desc: 'Advisory hazard-penalized route guidance and verified emergency trauma hospital proximity lookup.',
-      phase: 'Phase 6 Planned'
+      phase: 'Phase 5.3 & 6 Active'
     },
     authority: {
       title: 'Road Authority & Municipal Triage',
-      desc: 'Review, verify, and prioritize citizen hazard observations and automated YOLO damage detections.',
-      phase: 'Phase 2, 3 & 7'
+      desc: 'Review, verify, and prioritize citizen hazard observations, PostGIS density, and automated YOLO damage detections.',
+      phase: 'Phase 2, 3, 5 & 6 Active'
     }
   };
 
@@ -258,11 +282,24 @@ export const App: React.FC = () => {
         {activeTab === 'damage' ? (
           <DamageDetectionView onPrefillHazard={handlePrefillHazard} />
         ) : activeTab === 'vehicle' ? (
-          <VehicleAssessmentView />
+          <VehicleAssessmentView
+            onApplyToRisk={(score) => handleNavigateToRisk(selectedCoord.lat, selectedCoord.lon, score)}
+          />
         ) : activeTab === 'risk' ? (
-          <AccidentRiskView />
+          <AccidentRiskView
+            initialLat={selectedCoord.lat}
+            initialLon={selectedCoord.lon}
+            initialVehicleScore={vehicleScore}
+            onNavigateToEmergency={handleNavigateToEmergency}
+            onNavigateToMap={handleNavigateToMap}
+          />
         ) : activeTab === 'emergency' ? (
-          <EmergencySupportView />
+          <EmergencySupportView
+            initialLat={selectedCoord.lat}
+            initialLon={selectedCoord.lon}
+            onNavigateToRisk={handleNavigateToRisk}
+            onNavigateToMap={handleNavigateToMap}
+          />
         ) : (
           <>
             {/* Map & Hazard Reporting Section */}
@@ -291,6 +328,8 @@ export const App: React.FC = () => {
                 onLocationSelect={(lat, lon) => setSelectedCoord({ lat, lon })}
                 hazards={hazards}
                 focusHazard={focusHazard}
+                onNavigateToRisk={handleNavigateToRisk}
+                onNavigateToEmergency={handleNavigateToEmergency}
               />
             </div>
 
@@ -310,6 +349,8 @@ export const App: React.FC = () => {
                 hazards={hazards}
                 loading={loadingHazards}
                 onSelectHazard={handleSelectHazard}
+                onNavigateToRisk={handleNavigateToRisk}
+                onNavigateToEmergency={handleNavigateToEmergency}
               />
             </div>
           </>
@@ -322,7 +363,7 @@ export const App: React.FC = () => {
             Approved Development Modules & Status
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-700">Phase 2</span>
@@ -385,6 +426,19 @@ export const App: React.FC = () => {
               <h4 className="text-sm font-bold text-slate-900">Hospital & Emergency</h4>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 Verified trauma hospital locator with PostGIS meter proximity and Haversine fallback.
+              </p>
+            </div>
+
+            <div className="bg-white border border-teal-200 p-5 rounded-2xl shadow-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-700">Phase 6</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200 font-medium">
+                  Active
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-slate-900">Cross-Module Integration</h4>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Interconnected workflows across map pins, damage detection, vehicle profiles, risk models, and dispatch.
               </p>
             </div>
           </div>

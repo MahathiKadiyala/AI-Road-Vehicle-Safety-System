@@ -495,10 +495,17 @@ export const DamageDetectionView: React.FC<DamageDetectionViewProps> = ({ onPref
                                 {det.suggested_severity}
                               </strong>
                             </span>
-                            <span className="font-mono text-[10px]">
-                              [{det.box.xmin.toFixed(2)}, {det.box.ymin.toFixed(2)}, {det.box.xmax.toFixed(2)},{' '}
-                              {det.box.ymax.toFixed(2)}]
-                            </span>
+                            {onPrefillHazard && (
+                              <button
+                                type="button"
+                                onClick={() => handlePrefillReport(det)}
+                                className="text-[10px] font-semibold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded-md border border-sky-200 transition-colors flex items-center gap-1 cursor-pointer"
+                                title="Prefill citizen report with this specific distress"
+                              >
+                                <FileText className="w-3 h-3 text-sky-600" />
+                                <span>Report Item</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}

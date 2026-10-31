@@ -7,6 +7,8 @@ import {
   MapPin,
   Activity,
   FileCode,
+  Gauge,
+  Ambulance,
 } from 'lucide-react';
 import {
   RiskModelStatus,
@@ -19,21 +21,50 @@ import {
   predictAccidentRisk,
 } from '../../services/api';
 
-export const AccidentRiskView: React.FC = () => {
+interface AccidentRiskViewProps {
+  initialLat?: number;
+  initialLon?: number;
+  initialVehicleScore?: number | null;
+  onNavigateToEmergency?: (lat: number, lon: number) => void;
+  onNavigateToMap?: (lat: number, lon: number) => void;
+}
+
+export const AccidentRiskView: React.FC<AccidentRiskViewProps> = ({
+  initialLat,
+  initialLon,
+  initialVehicleScore,
+  onNavigateToEmergency,
+  onNavigateToMap,
+}) => {
   // State
   const [modelStatus, setModelStatus] = useState<RiskModelStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState<boolean>(true);
   const [statusError, setStatusError] = useState<string | null>(null);
 
   // Form parameters
-  const [latitude, setLatitude] = useState<number>(12.9716);
-  const [longitude, setLongitude] = useState<number>(77.5946);
+  const [latitude, setLatitude] = useState<number>(initialLat ?? 12.9716);
+  const [longitude, setLongitude] = useState<number>(initialLon ?? 77.5946);
   const [roadClass, setRoadClass] = useState<string>('urban_arterial');
   const [speedLimit, setSpeedLimit] = useState<number>(50);
   const [surface, setSurface] = useState<string>('dry');
   const [lighting, setLighting] = useState<string>('daylight');
   const [weather, setWeather] = useState<string>('clear');
   const [radiusMeters, setRadiusMeters] = useState<number>(1000);
+  const [vehicleSafetyScore, setVehicleSafetyScore] = useState<number | null>(initialVehicleScore ?? null);
+
+  // Sync props when coordinates or vehicle score change
+  useEffect(() => {
+    if (initialLat !== undefined && initialLon !== undefined) {
+      setLatitude(initialLat);
+      setLongitude(initialLon);
+    }
+  }, [initialLat, initialLon]);
+
+  useEffect(() => {
+    if (initialVehicleScore !== undefined && initialVehicleScore !== null) {
+      setVehicleSafetyScore(initialVehicleScore);
+    }
+  }, [initialVehicleScore]);
 
   // Spatial density probe state
   const [densityData, setDensityData] = useState<HazardDensitySummary | null>(null);
@@ -91,6 +122,7 @@ export const AccidentRiskView: React.FC = () => {
       lighting_condition: lighting,
       weather_condition: weather,
       search_radius_meters: radiusMeters,
+      vehicle_safety_score: vehicleSafetyScore,
     };
 
     try {
@@ -182,14 +214,42 @@ export const AccidentRiskView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Corridor Parameter Input Form (5 cols) */}
         <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
-          <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-sky-600" />
-              Corridor Parameter Specifications
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Configure road segment attributes to probe hazard density and test prediction pipeline.
-            </p>
+          <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-sky-600" />
+                Corridor Parameter Specifications
+              </h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Configure road segment attributes to probe hazard density and test prediction pipeline.
+              </p>
+            </div>
+
+            {/* Quick Corridor Presets */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-slate-400 font-medium">Presets:</span>
+              <button
+                type="button"
+                onClick={() => { setLatitude(12.9716); setLongitude(77.5946); }}
+                className="text-[10px] px-2 py-0.5 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 font-medium cursor-pointer transition-colors"
+              >
+                Central
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLatitude(12.9345); setLongitude(77.6265); }}
+                className="text-[10px] px-2 py-0.5 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 font-medium cursor-pointer transition-colors"
+              >
+                Koramangala
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLatitude(12.9996); setLongitude(77.5710); }}
+                className="text-[10px] px-2 py-0.5 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 font-medium cursor-pointer transition-colors"
+              >
+                Malleshwaram
+              </button>
+            </div>
           </div>
 
           <form onSubmit={handlePredict} className="space-y-4">
@@ -332,6 +392,44 @@ export const AccidentRiskView: React.FC = () => {
               />
             </div>
 
+            {/* Vehicle Mechanical Safety Profile (Phase 4 Integration) */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/90 space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Gauge className="w-3.5 h-3.5 text-sky-600" />
+                  Vehicle Safety Profile (Phase 4)
+                </label>
+                <span className="text-[10px] font-mono font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                  {vehicleSafetyScore !== null ? `${vehicleSafetyScore.toFixed(1)} / 100` : 'Default Baseline'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="Optional score from Vehicle Assessment"
+                  value={vehicleSafetyScore !== null ? vehicleSafetyScore : ''}
+                  onChange={(e) => setVehicleSafetyScore(e.target.value === '' ? null : parseFloat(e.target.value))}
+                  className="w-full text-xs font-mono px-3 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                />
+                {vehicleSafetyScore !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setVehicleSafetyScore(null)}
+                    className="px-2.5 py-1.5 text-xs text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg bg-white cursor-pointer"
+                    title="Clear vehicle score"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-500">
+                Integrates tyre wear and brake pad health from the Vehicle Safety module into risk evaluation.
+              </p>
+            </div>
+
             {/* Action Buttons */}
             <div className="pt-2 flex flex-col sm:flex-row gap-2">
               <button
@@ -353,6 +451,32 @@ export const AccidentRiskView: React.FC = () => {
                 {predicting ? 'Evaluating...' : 'Request Prediction'}
               </button>
             </div>
+
+            {/* Cross-Workflow Navigation Actions */}
+            {(onNavigateToEmergency || onNavigateToMap) && (
+              <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
+                {onNavigateToMap && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToMap(latitude, longitude)}
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-sky-600" />
+                    <span>View on Map</span>
+                  </button>
+                )}
+                {onNavigateToEmergency && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToEmergency(latitude, longitude)}
+                    className="flex-1 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Ambulance className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Locate Hospitals</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Prediction Error Alert */}
             {predictError && (

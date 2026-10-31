@@ -9,14 +9,27 @@ import {
   Navigation,
   Info,
   RotateCcw,
+  Activity,
 } from 'lucide-react';
 import { NearbyHospital, NearbyHospitalsResponse } from '../../types';
 import { fetchNearbyHospitals } from '../../services/api';
 
-export const EmergencySupportView: React.FC = () => {
-  // Coordinates and query params (defaults to Bengaluru center)
-  const [latitude, setLatitude] = useState<number>(12.9716);
-  const [longitude, setLongitude] = useState<number>(77.5946);
+export interface EmergencySupportViewProps {
+  initialLat?: number;
+  initialLon?: number;
+  onNavigateToRisk?: (lat: number, lon: number) => void;
+  onNavigateToMap?: (lat: number, lon: number) => void;
+}
+
+export const EmergencySupportView: React.FC<EmergencySupportViewProps> = ({
+  initialLat = 12.9716,
+  initialLon = 77.5946,
+  onNavigateToRisk,
+  onNavigateToMap,
+}) => {
+  // Coordinates and query params (defaults to Bengaluru center or passed coordinate)
+  const [latitude, setLatitude] = useState<number>(initialLat);
+  const [longitude, setLongitude] = useState<number>(initialLon);
   const [radiusKm, setRadiusKm] = useState<number>(10);
   const [emergencyOnly, setEmergencyOnly] = useState<boolean>(true);
 
@@ -24,6 +37,14 @@ export const EmergencySupportView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<NearbyHospitalsResponse | null>(null);
+
+  // Sync when initialLat or initialLon change
+  useEffect(() => {
+    if (initialLat !== undefined && initialLon !== undefined) {
+      setLatitude(initialLat);
+      setLongitude(initialLon);
+    }
+  }, [initialLat, initialLon]);
 
   const handleSearch = async () => {
     setLoading(true);
@@ -149,6 +170,28 @@ export const EmergencySupportView: React.FC = () => {
             >
               Malleshwaram
             </button>
+            {onNavigateToMap && (
+              <button
+                type="button"
+                onClick={() => onNavigateToMap(latitude, longitude)}
+                className="text-xs px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-700 font-medium transition-colors flex items-center gap-1"
+                title="View current search coordinates on Map"
+              >
+                <MapPin className="w-3 h-3 text-sky-600" />
+                <span>Map Pin</span>
+              </button>
+            )}
+            {onNavigateToRisk && (
+              <button
+                type="button"
+                onClick={() => onNavigateToRisk(latitude, longitude)}
+                className="text-xs px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-200 hover:bg-purple-100 text-purple-700 font-medium transition-colors flex items-center gap-1"
+                title="Assess Corridor Risk around current coordinates"
+              >
+                <Activity className="w-3 h-3 text-purple-600" />
+                <span>Corridor Risk</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -325,6 +368,32 @@ export const EmergencySupportView: React.FC = () => {
                     {hospital.total_beds_reference && (
                       <div className="text-[11px] text-slate-500">
                         Reference capacity: <span className="font-semibold text-slate-700">{hospital.total_beds_reference} beds</span> (public reference)
+                      </div>
+                    )}
+
+                    {/* Cross-navigation links for this hospital */}
+                    {(onNavigateToMap || onNavigateToRisk) && (
+                      <div className="flex items-center gap-2 pt-1">
+                        {onNavigateToMap && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToMap(hospital.latitude, hospital.longitude)}
+                            className="flex-1 text-[11px] font-semibold py-1.5 px-2 rounded-lg bg-slate-50 hover:bg-sky-50 text-slate-700 hover:text-sky-700 border border-slate-200 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <MapPin className="w-3 h-3 text-sky-600" />
+                            <span>Map Pin</span>
+                          </button>
+                        )}
+                        {onNavigateToRisk && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToRisk(hospital.latitude, hospital.longitude)}
+                            className="flex-1 text-[11px] font-semibold py-1.5 px-2 rounded-lg bg-slate-50 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <Activity className="w-3 h-3 text-purple-600" />
+                            <span>Corridor Risk</span>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
