@@ -6,6 +6,7 @@ and PostGIS Point geometry creation (SRID 4326, longitude as X, latitude as Y).
 """
 import logging
 import math
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, Any
 from uuid import UUID
 
@@ -258,7 +259,7 @@ class SpatialService:
                     latitude=hazard.latitude,
                     longitude=hazard.longitude,
                     distance_meters=round(dist, 1),
-                    created_at=hazard.created_at,
+                    created_at=hazard.created_at or datetime.now(timezone.utc),
                 )
             )
 
@@ -406,7 +407,7 @@ class SpatialService:
                     contact_phone=h.contact_phone,
                     has_emergency_service=h.has_emergency_service,
                     total_beds_reference=h.total_beds_reference,
-                    is_verified_facility=h.is_verified_facility,
+                    is_verified_facility=bool(h.is_verified_facility if h.is_verified_facility is not None else True),
                 )
             )
 
@@ -462,6 +463,8 @@ class SpatialService:
         for h in candidates:
             # Handle row tuples if scalars wasn't used
             h_obj = h[0] if isinstance(h, tuple) else h
+            if h_obj.latitude is None or h_obj.longitude is None:
+                continue
             dist = haversine_distance_meters(latitude, longitude, h_obj.latitude, h_obj.longitude)
             if dist <= radius_meters:
                 nearby_items.append((h_obj, dist))
@@ -481,7 +484,7 @@ class SpatialService:
                 contact_phone=h.contact_phone,
                 has_emergency_service=h.has_emergency_service,
                 total_beds_reference=h.total_beds_reference,
-                is_verified_facility=h.is_verified_facility,
+                is_verified_facility=bool(h.is_verified_facility if h.is_verified_facility is not None else True),
             )
             for h, d in nearby_items[:limit]
         ]
@@ -541,11 +544,14 @@ class SpatialService:
         by_severity: Dict[str, int] = {}
 
         for h in candidates:
-            dist = haversine_distance_meters(latitude, longitude, h.latitude, h.longitude)
+            h_obj = h[0] if isinstance(h, tuple) else h
+            if h_obj.latitude is None or h_obj.longitude is None:
+                continue
+            dist = haversine_distance_meters(latitude, longitude, h_obj.latitude, h_obj.longitude)
             if dist <= radius_meters:
-                nearby_items.append((h, dist))
-                by_type[h.hazard_type] = by_type.get(h.hazard_type, 0) + 1
-                by_severity[h.severity] = by_severity.get(h.severity, 0) + 1
+                nearby_items.append((h_obj, dist))
+                by_type[h_obj.hazard_type] = by_type.get(h_obj.hazard_type, 0) + 1
+                by_severity[h_obj.severity] = by_severity.get(h_obj.severity, 0) + 1
 
         # Sort by distance ascending
         nearby_items.sort(key=lambda x: x[1])
@@ -559,7 +565,7 @@ class SpatialService:
                 latitude=h.latitude,
                 longitude=h.longitude,
                 distance_meters=round(d, 1),
-                created_at=h.created_at,
+                created_at=h.created_at or datetime.now(timezone.utc),
             )
             for h, d in nearby_items[:100]
         ]
