@@ -1,4 +1,5 @@
 """Database session management, async engine configuration, and PostGIS verification."""
+import re
 import logging
 from typing import AsyncGenerator, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -12,12 +13,26 @@ logger = logging.getLogger(__name__)
 # Base class for SQLAlchemy ORM models
 Base = declarative_base()
 
+
+def sanitize_database_error(msg: Optional[str]) -> Optional[str]:
+    """Scrub sensitive credentials, passwords, and tokens from database error strings.
+
+    Prevents credentials in connection strings (e.g. postgresql+asyncpg://user:pass@host)
+    from leaking via diagnostics, logs, or API health checks.
+    """
+    if not msg:
+        return msg
+    # Mask password portion in database URLs
+    sanitized = re.sub(r"://([^:]+):([^@]+)@", r"://\1:***@", str(msg))
+    return sanitized
+
 # Async SQLAlchemy Engine
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     future=True,
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    pool_recycle=300,
 )
 
 # Async Session Factory
@@ -77,7 +92,7 @@ async def check_database_connectivity() -> Dict[str, Any]:
                 )
 
     except Exception as exc:
-        error_msg = str(exc)
+        error_msg = sanitize_database_error(str(exc))
         logger.error(f"Database connectivity failed: {error_msg}")
         result["connected"] = False
         result["error"] = error_msg
@@ -113,6 +128,6 @@ async def init_db() -> Dict[str, Any]:
 
     except Exception as exc:
         logger.warning(f"Database initialization could not complete: {exc}")
-        init_status["error"] = str(exc)
+        init_status["error"] = sanitize_database_error(str(exc))
 
     return init_status

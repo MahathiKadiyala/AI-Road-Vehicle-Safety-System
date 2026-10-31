@@ -62,6 +62,10 @@ async def validate_and_save_image(file: UploadFile) -> Tuple[str, str]:
     Raises:
         ValueError: If the file fails validation (wrong type, too large, etc.).
     """
+    # 0. Reject suspicious filenames containing control characters or null bytes
+    if file.filename and ("\x00" in file.filename or "\r" in file.filename or "\n" in file.filename):
+        raise ValueError("Invalid filename: control characters or null bytes detected.")
+
     max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
     # 1. Read the file content (enforcing size limit)

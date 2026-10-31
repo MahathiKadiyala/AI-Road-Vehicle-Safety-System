@@ -223,7 +223,7 @@ async def get_hazard_density(
         logger.error(f"Spatial service unavailable: {srv_err}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Spatial density service unavailable: {str(srv_err)}",
+            detail="Spatial density service is temporarily unavailable. Database or spatial engine may be offline.",
         )
     except ValueError as val_err:
         raise HTTPException(

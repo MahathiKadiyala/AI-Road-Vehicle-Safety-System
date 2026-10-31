@@ -197,10 +197,11 @@ export const EmergencySupportView: React.FC<EmergencySupportViewProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label htmlFor="emergency-lat" className="block text-xs font-semibold text-slate-700 mb-1">
               Latitude (°N)
             </label>
             <input
+              id="emergency-lat"
               type="number"
               step="0.0001"
               value={latitude}
@@ -210,10 +211,11 @@ export const EmergencySupportView: React.FC<EmergencySupportViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label htmlFor="emergency-lon" className="block text-xs font-semibold text-slate-700 mb-1">
               Longitude (°E)
             </label>
             <input
+              id="emergency-lon"
               type="number"
               step="0.0001"
               value={longitude}
@@ -223,10 +225,11 @@ export const EmergencySupportView: React.FC<EmergencySupportViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label htmlFor="emergency-radius" className="block text-xs font-semibold text-slate-700 mb-1">
               Search Radius: <span className="text-indigo-600 font-mono font-bold">{radiusKm} km</span>
             </label>
             <input
+              id="emergency-radius"
               type="range"
               min="1"
               max="50"
@@ -238,8 +241,9 @@ export const EmergencySupportView: React.FC<EmergencySupportViewProps> = ({
           </div>
 
           <div className="flex flex-col justify-end">
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 mb-2">
+            <label htmlFor="emergency-only" className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 mb-2">
               <input
+                id="emergency-only"
                 type="checkbox"
                 checked={emergencyOnly}
                 onChange={(e) => setEmergencyOnly(e.target.checked)}

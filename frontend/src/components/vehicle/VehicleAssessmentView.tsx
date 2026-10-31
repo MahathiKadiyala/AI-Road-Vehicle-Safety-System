@@ -401,8 +401,9 @@ export const VehicleAssessmentView: React.FC<VehicleAssessmentViewProps> = ({ on
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Make / Brand</label>
+                <label htmlFor="vehicle-make" className="block text-xs font-medium text-slate-700 mb-1">Make / Brand</label>
                 <input
+                  id="vehicle-make"
                   type="text"
                   value={make}
                   onChange={(e) => setMake(e.target.value)}
@@ -413,8 +414,9 @@ export const VehicleAssessmentView: React.FC<VehicleAssessmentViewProps> = ({ on
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Model / Variant</label>
+                <label htmlFor="vehicle-model" className="block text-xs font-medium text-slate-700 mb-1">Model / Variant</label>
                 <input
+                  id="vehicle-model"
                   type="text"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
@@ -425,8 +427,9 @@ export const VehicleAssessmentView: React.FC<VehicleAssessmentViewProps> = ({ on
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Year of Manufacture</label>
+                <label htmlFor="vehicle-year" className="block text-xs font-medium text-slate-700 mb-1">Year of Manufacture</label>
                 <input
+                  id="vehicle-year"
                   type="number"
                   min="1970"
                   max="2030"
@@ -441,8 +444,9 @@ export const VehicleAssessmentView: React.FC<VehicleAssessmentViewProps> = ({ on
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-slate-700 mb-1">Odometer Reading (km)</label>
+                <label htmlFor="vehicle-odometer" className="block text-xs font-medium text-slate-700 mb-1">Odometer Reading (km)</label>
                 <input
+                  id="vehicle-odometer"
                   type="number"
                   min="0"
                   max="1000000"

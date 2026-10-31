@@ -70,7 +70,7 @@ async def get_nearby_hospitals(
         logger.error(f"Spatial hospital service unavailable: {srv_err}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Hospital proximity service unavailable: {str(srv_err)}",
+            detail="Hospital proximity service is temporarily unavailable. Database or spatial engine may be offline.",
         )
     except ValueError as val_err:
         raise HTTPException(

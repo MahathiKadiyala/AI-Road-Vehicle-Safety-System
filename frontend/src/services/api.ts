@@ -16,7 +16,58 @@ import {
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-const REQUEST_TIMEOUT_MS = 8000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 8000;
+
+export interface RequestOptions extends RequestInit {
+  timeoutMs?: number;
+  retries?: number;
+}
+
+/**
+ * Resilient fetch wrapper with explicit timeout cancellation and bounded retries
+ * for safe, idempotent HTTP GET requests.
+ */
+export async function resilientFetch(url: string, options: RequestOptions = {}): Promise<Response> {
+  const {
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+    retries = 0,
+    ...fetchOptions
+  } = options;
+
+  let lastError: any = null;
+  const isIdempotent = !fetchOptions.method || fetchOptions.method.toUpperCase() === 'GET';
+  const maxAttempts = isIdempotent ? Math.min(retries + 1, 2) : 1;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...fetchOptions,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      lastError = err;
+      const isTimeout = err?.name === 'AbortError';
+
+      if (attempt < maxAttempts - 1 && isIdempotent) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        continue;
+      }
+
+      if (isTimeout) {
+        throw new Error(`Request timed out after ${timeoutMs / 1000}s. Please check your network connection.`);
+      }
+      throw err;
+    }
+  }
+
+  throw lastError || new Error('Network request failed.');
+}
 
 export function computeHealthState(health: HealthResponse | null, loading: boolean): HealthState {
   if (loading && !health) {
@@ -41,16 +92,14 @@ export function computeHealthState(health: HealthResponse | null, loading: boole
 }
 
 export async function fetchHealthStatus(): Promise<HealthResponse> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
   try {
-    const response = await fetch(`${API_BASE_URL}/health`, {
+    const response = await resilientFetch(`${API_BASE_URL}/health`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
       },
-      signal: controller.signal,
+      timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
+      retries: 0,
     });
 
     if (!response.ok) {
@@ -59,7 +108,6 @@ export async function fetchHealthStatus(): Promise<HealthResponse> {
 
     return await response.json();
   } catch (error: any) {
-    const isTimeout = error.name === 'AbortError';
     return {
       status: 'offline',
       project_name: 'AI-Powered Road and Vehicle Safety System',
@@ -69,13 +117,11 @@ export async function fetchHealthStatus(): Promise<HealthResponse> {
         connected: false,
         database_url_configured: false,
         postgis_enabled: false,
-        error: isTimeout ? 'Request timed out after 8 seconds.' : (error.message || 'Cannot reach FastAPI backend server.'),
+        error: error.message || 'Cannot reach FastAPI backend server.',
         setup_guidance: 'Make sure FastAPI is running on port 8000 (uvicorn app.main:app --reload).'
       },
       timestamp: new Date().toISOString()
     };
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 
@@ -118,9 +164,10 @@ export async function createHazardReport(payload: CreateHazardPayload): Promise<
     formData.append('image', payload.image);
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/hazards`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/hazards`, {
     method: 'POST',
     body: formData,
+    timeoutMs: 15000,
   });
 
   if (!response.ok) {
@@ -153,9 +200,10 @@ export async function fetchHazardReports(params?: HazardListParams): Promise<Haz
   const qs = searchParams.toString();
   const url = `${API_BASE_URL}/api/v1/hazards${qs ? `?${qs}` : ''}`;
 
-  const response = await fetch(url, {
+  const response = await resilientFetch(url, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
+    retries: 1,
   });
 
   if (!response.ok) {
@@ -169,9 +217,10 @@ export async function fetchHazardReports(params?: HazardListParams): Promise<Haz
  * Fetch a single hazard report by ID.
  */
 export async function fetchHazardById(id: string): Promise<Hazard> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/hazards/${id}`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/hazards/${id}`, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
+    retries: 1,
   });
 
   if (!response.ok) {
@@ -197,9 +246,10 @@ export function getHazardImageUrl(imageUrl: string | null | undefined): string |
  * Fetch operational status and availability of the Road Damage YOLO model.
  */
 export async function fetchDamageModelStatus(): Promise<DamageModelStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/damage/status`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/damage/status`, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
+    retries: 1,
   });
 
   if (!response.ok) {
@@ -220,9 +270,10 @@ export async function detectRoadDamage(
   formData.append('image', file);
   formData.append('confidence_threshold', String(confidenceThreshold));
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/damage/detect`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/damage/detect`, {
     method: 'POST',
     body: formData,
+    timeoutMs: 30000,
   });
 
   if (!response.ok) {
@@ -252,9 +303,10 @@ export async function detectRoadDamage(
  * Fetch verified statutory and technical vehicle safety standards registry.
  */
 export async function fetchVehicleStandards(): Promise<VehicleStandardsResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/vehicles/standards`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/vehicles/standards`, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
+    retries: 1,
   });
 
   if (!response.ok) {
@@ -270,13 +322,14 @@ export async function fetchVehicleStandards(): Promise<VehicleStandardsResponse>
 export async function assessVehicle(
   payload: VehicleAssessmentPayload
 ): Promise<VehicleAssessmentResult> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/vehicles/assess`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/vehicles/assess`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
     body: JSON.stringify(payload),
+    timeoutMs: 12000,
   });
 
   if (!response.ok) {
@@ -303,9 +356,10 @@ export async function assessVehicle(
 export async function fetchVehicleAssessmentById(
   id: string
 ): Promise<VehicleAssessmentResult> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/vehicles/${id}`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/vehicles/${id}`, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
+    retries: 1,
   });
 
   if (!response.ok) {
@@ -332,9 +386,10 @@ export async function fetchHazardDensity(
     radius_meters: radiusMeters.toString(),
   });
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/hazards/density?${params.toString()}`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/hazards/density?${params.toString()}`, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
+    retries: 1,
   });
 
   if (!response.ok) {
@@ -349,9 +404,10 @@ export async function fetchHazardDensity(
  * Query operational status and data provenance of the accident risk model.
  */
 export async function fetchRiskModelStatus(): Promise<RiskModelStatus> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/risk/status`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/risk/status`, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
+    retries: 1,
   });
 
   if (!response.ok) {
@@ -367,13 +423,14 @@ export async function fetchRiskModelStatus(): Promise<RiskModelStatus> {
 export async function predictAccidentRisk(
   payload: RiskPredictionPayload
 ): Promise<RiskPredictionResult> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/risk/predict`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/risk/predict`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
     body: JSON.stringify(payload),
+    timeoutMs: 15000,
   });
 
   if (!response.ok) {
@@ -413,9 +470,10 @@ export async function fetchNearbyHospitals(
     limit: String(limit),
   });
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/hospitals/nearby?${params.toString()}`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/hospitals/nearby?${params.toString()}`, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
+    retries: 1,
   });
 
   if (!response.ok) {
@@ -431,9 +489,10 @@ export async function fetchNearbyHospitals(
  * Fetch a single hospital facility by its ID.
  */
 export async function fetchHospitalById(id: string): Promise<NearbyHospital> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/hospitals/${id}`, {
+  const response = await resilientFetch(`${API_BASE_URL}/api/v1/hospitals/${id}`, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
+    retries: 1,
   });
 
   if (!response.ok) {

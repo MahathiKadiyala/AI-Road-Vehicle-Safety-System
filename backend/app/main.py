@@ -2,7 +2,8 @@
 import os
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -57,13 +58,34 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Global exception handler to prevent leaking internal stack traces or paths
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception during {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. Please try again later."},
+    )
+
+
+# Security headers middleware (OWASP recommendations)
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
 # CORS Middleware Configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "X-Requested-With"],
 )
 
 # Root-level health endpoint for easy monitoring (GET /health)
@@ -75,6 +97,6 @@ async def root_health():
 # Include API v1 routes
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
-# Mount static uploads if available
-if os.path.exists(settings.UPLOAD_DIR):
-    app.mount("/static/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# Ensure upload directory exists and mount static uploads route
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+app.mount("/static/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")

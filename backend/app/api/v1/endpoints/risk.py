@@ -97,8 +97,8 @@ async def predict_accident_risk(
             },
         )
     except Exception as exc:
-        logger.error(f"Inference error: {exc}")
+        logger.error(f"Inference error: {exc}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Risk prediction failed: {str(exc)}",
+            detail="Risk prediction failed due to an internal server error.",
         )

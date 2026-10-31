@@ -47,9 +47,13 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
-        """Convert comma-separated origins into a trimmed list."""
-        if not self.CORS_ORIGINS:
-            return ["*"]
+        """Convert comma-separated origins into a trimmed list.
+
+        Defaults to local client origins if unset or wildcard to prevent invalid
+        CORS configurations when allow_credentials=True.
+        """
+        if not self.CORS_ORIGINS or self.CORS_ORIGINS.strip() == "*":
+            return ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
 

@@ -321,10 +321,11 @@ export const AccidentRiskView: React.FC<AccidentRiskViewProps> = ({
             {/* Coordinates */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label htmlFor="risk-lat" className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Latitude
                 </label>
                 <input
+                  id="risk-lat"
                   type="number"
                   step="any"
                   value={latitude}
@@ -339,10 +340,11 @@ export const AccidentRiskView: React.FC<AccidentRiskViewProps> = ({
                 )}
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label htmlFor="risk-lon" className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Longitude
                 </label>
                 <input
+                  id="risk-lon"
                   type="number"
                   step="any"
                   value={longitude}
